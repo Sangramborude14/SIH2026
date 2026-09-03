@@ -66,6 +66,12 @@ class EngineAssessmentResponse(BaseModel):
     summary: str
     timestamp: datetime
     engine_version: str = "1.0.0"
+    forecast_probabilities: Dict[str, float] = Field(default_factory=dict)
+    forecast_available: bool = False
+    ml_model_status: str = "NOT_TRAINED"
+    ml_model_version: Optional[str] = None
+    observed_drivers: List[str] = Field(default_factory=list)
+
 
 
 class MultiLocationEngineResponse(BaseModel):

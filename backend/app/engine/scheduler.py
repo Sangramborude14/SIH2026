@@ -89,4 +89,7 @@ class BackgroundEngineScheduler:
             self._task.cancel()
 
 
-background_engine_scheduler = BackgroundEngineScheduler(interval_seconds=30)
+background_engine_scheduler = BackgroundEngineScheduler(
+    interval_seconds=getattr(settings, "ENGINE_ASSESSMENT_INTERVAL_SECONDS", 30)
+)
+from backend.app.services.live_ingestion import live_ingestion_scheduler  # re-export

@@ -1,0 +1,211 @@
+{
+  "model_id": "tabular-tabular_ml_gradient_boost-ner",
+  "model_name": "HistGradientBoosting Classifier",
+  "model_tier": "TABULAR_ML_GRADIENT_BOOST",
+  "model_version": "v2.0.0",
+  "forecast_horizon": "24H",
+  "forecast_horizon_hours": 24,
+  "training_source": "SYNTHETIC",
+  "validation_level": "SIMULATION_ONLY",
+  "trained_at": "2026-09-03T17:22:01.890233+00:00",
+  "training_samples_count": 10496,
+  "validation_samples_count": 2248,
+  "test_samples_count": 2256,
+  "positive_events_count": 6858,
+  "negative_samples_count": 8142,
+  "test_roc_auc": 0.9916,
+  "test_pr_auc": 0.9903,
+  "test_f1_score": 0.9415,
+  "test_precision": 0.9186,
+  "test_recall": 0.9654,
+  "test_brier_score": 0.0371,
+  "decision_threshold": 0.5,
+  "random_seed": 42,
+  "feature_schema_version": "2.0.0",
+  "feature_names": [
+    "slope_angle",
+    "elevation",
+    "aspect_sin",
+    "aspect_cos",
+    "baseline_susceptibility",
+    "rainfall_1h",
+    "rainfall_3h",
+    "rainfall_6h",
+    "rainfall_12h",
+    "rainfall_24h",
+    "rainfall_48h",
+    "rainfall_72h",
+    "rainfall_7d",
+    "consecutive_wet_hours",
+    "antecedent_precipitation_index",
+    "rainfall_z_score_24h",
+    "id_curve_ratio",
+    "soil_moisture_surface",
+    "soil_moisture_middle",
+    "soil_moisture_deep",
+    "soil_moisture_change_6h",
+    "soil_moisture_change_24h",
+    "month_sin",
+    "month_cos",
+    "is_monsoon_season"
+  ],
+  "feature_importances": [
+    {
+      "feature": "slope_angle",
+      "importance_score": 0.8228,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_72h",
+      "importance_score": 0.1292,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "soil_moisture_surface",
+      "importance_score": 0.0095,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "consecutive_wet_hours",
+      "importance_score": 0.0091,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "antecedent_precipitation_index",
+      "importance_score": 0.0091,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_24h",
+      "importance_score": 0.0072,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_6h",
+      "importance_score": 0.0057,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "id_curve_ratio",
+      "importance_score": 0.0045,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_z_score_24h",
+      "importance_score": 0.0021,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_1h",
+      "importance_score": 0.0009,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "elevation",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "aspect_sin",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "aspect_cos",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "baseline_susceptibility",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_3h",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_12h",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_48h",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "rainfall_7d",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "soil_moisture_middle",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "soil_moisture_deep",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "soil_moisture_change_6h",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "soil_moisture_change_24h",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "month_sin",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "month_cos",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    },
+    {
+      "feature": "is_monsoon_season",
+      "importance_score": 0.0,
+      "method": "permutation_importance"
+    }
+  ],
+  "candidate_comparison": [
+    {
+      "name": "Logistic Regression Baseline",
+      "tier": "TABULAR_ML_LOGISTIC",
+      "pr_auc": 0.987,
+      "roc_auc": 0.9892,
+      "f1_score": 0.9349,
+      "recall": 0.9478,
+      "precision": 0.9223,
+      "brier_score": 0.0397
+    },
+    {
+      "name": "Random Forest Classifier",
+      "tier": "TABULAR_ML_RANDOM_FOREST",
+      "pr_auc": 0.988,
+      "roc_auc": 0.9904,
+      "f1_score": 0.9382,
+      "recall": 0.9429,
+      "precision": 0.9337,
+      "brier_score": 0.0359
+    },
+    {
+      "name": "HistGradientBoosting Classifier",
+      "tier": "TABULAR_ML_GRADIENT_BOOST",
+      "pr_auc": 0.9886,
+      "roc_auc": 0.9908,
+      "f1_score": 0.9412,
+      "recall": 0.9547,
+      "precision": 0.9282,
+      "brier_score": 0.0366
+    }
+  ]
+}

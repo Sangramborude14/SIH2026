@@ -19,16 +19,19 @@ class EventManager:
     def determine_event_status_and_severity(
         self,
         risk_score: float,
-        current_event: Optional[DisasterEvent] = None
+        current_event: Optional[DisasterEvent] = None,
+        forecast_probability: Optional[float] = None
     ) -> Tuple[str, str]:
         """
-        Maps risk score to EventStatus and DisasterEvent severity string
+        Maps deterministic risk score and/or ML forecast probability to EventStatus and severity
         with hysteresis buffering against noisy score fluctuations on downgrades.
+        Does NOT blend scores into a fake composite number: checks dual operational thresholds.
         """
         buffer = settings.HYSTERESIS_DOWNGRADE_BUFFER  # e.g., 4.0 pts
 
         # Escalation checks ALWAYS take precedence
-        if risk_score >= settings.THRESHOLD_CRITICAL:    # >= 75.0
+        # Critical if deterministic score >= 75.0 OR ML forecast probability >= 0.75
+        if risk_score >= settings.THRESHOLD_CRITICAL or (forecast_probability is not None and forecast_probability >= 0.75):
             return EventStatus.CRITICAL.value, "CRITICAL"
 
         # If existing event is in higher state, check downgrade hysteresis buffer
@@ -37,26 +40,27 @@ class EventManager:
 
             # Hysteresis for CRITICAL -> HIGH
             if curr_sev == "CRITICAL":
-                if risk_score >= (settings.THRESHOLD_CRITICAL - buffer):  # >= 71.0
+                if risk_score >= (settings.THRESHOLD_CRITICAL - buffer) or (forecast_probability is not None and forecast_probability >= 0.70):
                     return EventStatus.CRITICAL.value, "CRITICAL"
-                elif risk_score >= settings.THRESHOLD_HIGH:
+                elif risk_score >= settings.THRESHOLD_HIGH or (forecast_probability is not None and forecast_probability >= 0.55):
                     return EventStatus.HIGH.value, "HIGH"
 
             # Hysteresis for HIGH -> ELEVATED
             if curr_sev == "HIGH":
-                if risk_score >= settings.THRESHOLD_HIGH:
+                if risk_score >= settings.THRESHOLD_HIGH or (forecast_probability is not None and forecast_probability >= 0.55):
                     return EventStatus.HIGH.value, "HIGH"
-                elif risk_score >= (settings.THRESHOLD_HIGH - buffer):  # >= 46.0
+                elif risk_score >= (settings.THRESHOLD_HIGH - buffer) or (forecast_probability is not None and forecast_probability >= 0.50):
                     return EventStatus.HIGH.value, "HIGH"
-                elif risk_score >= settings.THRESHOLD_ELEVATED:
+                elif risk_score >= settings.THRESHOLD_ELEVATED or (forecast_probability is not None and forecast_probability >= 0.35):
                     return EventStatus.ELEVATED.value, "MODERATE"
 
         # Standard Threshold Mapping
-        if risk_score >= settings.THRESHOLD_HIGH:       # >= 50.0
+        # High if deterministic score >= 50.0 OR ML probability >= 0.55
+        if risk_score >= settings.THRESHOLD_HIGH or (forecast_probability is not None and forecast_probability >= 0.55):
             return EventStatus.HIGH.value, "HIGH"
-        elif risk_score >= settings.THRESHOLD_ELEVATED:   # >= 40.0
+        elif risk_score >= settings.THRESHOLD_ELEVATED or (forecast_probability is not None and forecast_probability >= 0.35):
             return EventStatus.ELEVATED.value, "MODERATE"
-        elif risk_score >= settings.THRESHOLD_WATCH:      # >= 25.0
+        elif risk_score >= settings.THRESHOLD_WATCH or (forecast_probability is not None and forecast_probability >= 0.20):
             return EventStatus.WATCH.value, "LOW"
         elif current_event and current_event.status != "RESOLVED" and risk_score >= (settings.THRESHOLD_WATCH - buffer):
             return EventStatus.RESOLVING.value, "LOW"
@@ -87,7 +91,8 @@ class EventManager:
         self,
         session: AsyncSession,
         location: Location,
-        assessment: AssessmentOutput
+        assessment: AssessmentOutput,
+        forecast_probability: Optional[float] = None
     ) -> Tuple[Optional[DisasterEvent], str]:
         """
         Processes risk assessment against the event lifecycle state machine.
@@ -97,8 +102,10 @@ class EventManager:
         active_event = await self.get_active_event(session, location.id, assessment.hazard_type)
         new_status, new_severity = self.determine_event_status_and_severity(
             assessment.risk_score,
-            current_event=active_event
+            current_event=active_event,
+            forecast_probability=forecast_probability
         )
+
         now = datetime.now(timezone.utc)
 
         # Case 1: Risk is low (< 21 after buffer)

@@ -42,6 +42,14 @@ class LocationMapItem(BaseModel):
     soil_moisture: Optional[float] = None
     trend_direction: str = "UNKNOWN"
     last_updated: datetime
+    anomaly_score: Optional[float] = None
+    anomaly_level: Optional[str] = None
+    forecast_probabilities: Dict[str, float] = Field(default_factory=dict)
+    forecast_available: bool = False
+    model_version: Optional[str] = None
+    model_status: Optional[str] = None
+    data_freshness: str = "FRESH"
+
 
 
 class EventTimelineMilestone(BaseModel):

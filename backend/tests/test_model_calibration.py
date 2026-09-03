@@ -5,16 +5,18 @@ from backend.app.schemas.analytics import BacktestRequest, BacktestWeightConfig
 
 def test_baseline_calibration_metrics():
     metrics = model_calibration_service.get_baseline_calibration_metrics()
-    assert metrics.precision > 0.80
-    assert metrics.recall > 0.85
-    assert metrics.f1_score > 0.85
-    assert metrics.roc_auc >= 0.90
-    assert metrics.lead_time_distribution.mean_lead_time_hours >= 15.0
+    assert metrics.model_status in ["READY", "NOT_TRAINED"]
+    if metrics.is_trained:
+        assert metrics.model_status == "READY"
+        assert metrics.brier_score is not None
+        assert metrics.confusion_matrix is not None
+        assert metrics.is_simulated is False
+        assert "AUTHENTIC" in metrics.disclaimer
+    else:
+        assert metrics.model_status == "NOT_TRAINED"
+        assert metrics.precision is None
+        assert "NOT TRAINED" in metrics.disclaimer
 
-    # Verify confusion matrix consistency
-    cm = metrics.confusion_matrix
-    expected_prec = cm.true_positives / (cm.true_positives + cm.false_positives)
-    assert abs(metrics.precision - round(expected_prec, 4)) < 0.001
 
 
 @pytest.mark.asyncio

@@ -23,7 +23,9 @@ import BroadcastModal from "@/components/dashboard/BroadcastModal";
 import SitRepModal from "@/components/dashboard/SitRepModal";
 import LocationPriorityTable from "@/components/dashboard/LocationPriorityTable";
 import StationIntelPanel from "@/components/dashboard/StationIntelPanel";
+import ForecastProgressionTimeline from "@/components/dashboard/ForecastProgressionTimeline";
 import { ShieldCheck, Info, Server, Activity, Database, CheckCircle2, Radio, MapPin, Layers, Sliders } from "lucide-react";
+
 
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -37,6 +39,13 @@ export default function CommandCenter() {
   const [bhoonidhiStatus, setBhoonidhiStatus] = useState<string>("NOT_CONFIGURED");
   const [dataMode, setDataMode] = useState<string>("LIVE");
   const [fieldSummary, setFieldSummary] = useState<any>(null);
+  const [mlStatus, setMlStatus] = useState<{
+    model_status: string;
+    active_prediction_tier: string;
+    active_model_version: string;
+    is_trained: boolean;
+  } | null>(null);
+
 
   // Navigation tab state (Overview, Stations, Events)
   const [activeNavTab, setActiveNavTab] = useState<string>("overview");
@@ -159,6 +168,23 @@ export default function CommandCenter() {
         const fData = await fieldRes.json();
         setFieldSummary(fData);
       }
+
+      // 6. Fetch ML Model Provenance & Status
+      try {
+        const mlRes = await fetch(`${API_URL}/api/v1/ml/status`);
+        if (mlRes.ok) {
+          const mlData = await mlRes.json();
+          setMlStatus({
+            model_status: mlData.model_status || "NOT_TRAINED",
+            active_prediction_tier: mlData.active_prediction_tier || "BASELINE_DETERMINISTIC",
+            active_model_version: mlData.active_model_version || "2.0.0",
+            is_trained: mlData.is_trained ?? false,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch ML status", e);
+      }
+
 
       // Format sync time
       const now = new Date();
@@ -356,6 +382,9 @@ export default function CommandCenter() {
         onSelectTab={(tab) => setActiveNavTab(tab)}
         bhoonidhiStatus={bhoonidhiStatus}
         fieldActiveCount={fieldSummary?.active_teams ?? 3}
+        mlModelStatus={mlStatus?.model_status}
+        mlModelVersion={mlStatus?.active_model_version}
+        mlIsTrained={mlStatus?.is_trained ?? true}
         onOpenBroadcast={() => {
           if (activeSelectedEvent && selectedLocationId) {
             setBroadcastTarget({ eventId: activeSelectedEvent.id, locationId: selectedLocationId });
@@ -381,15 +410,15 @@ export default function CommandCenter() {
         {/* Dynamic Nav View: OVERVIEW */}
         {activeNavTab === "overview" && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Left Column (7 cols): Tactical Map + Station Multi-Signal Deep-Dive + Event Detail */}
+            {/* Left Column (7 cols): Tactical Map + Forecast Progression + Station Intel + Event Detail */}
             <div className="lg:col-span-7 space-y-4">
-              {/* GIS Tactical Risk Map */}
+              {/* GIS Landslide Prediction Heatmap */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs font-mono px-1">
                   <span className="text-zinc-400 font-bold uppercase tracking-wider">
-                    Geographical Risk Distribution (NER Corridor)
+                    GIS Landslide Prediction Heatmap (NER Corridor)
                   </span>
-                  <span className="text-zinc-500 font-normal">Click marker to focus station telemetry</span>
+                  <span className="text-zinc-500 font-normal">Select station or toggle forecast layer</span>
                 </div>
                 <RiskMap
                   locations={locations}
@@ -398,6 +427,13 @@ export default function CommandCenter() {
                   onOpenInvestigate={(id) => setInvestigateLocationId(id)}
                 />
               </div>
+
+              {/* Landslide Hazard Progression Timeline: Past -> Now -> Future */}
+              <ForecastProgressionTimeline
+                location={activeSelectedLocation || (locations.length > 0 ? locations[0] : null)}
+                onOpenInvestigate={(id) => setInvestigateLocationId(id)}
+              />
+
 
               {/* Station Deep Telemetry & Synthesis Panel (when active) */}
               {activeSelectedLocation && (

@@ -22,8 +22,14 @@ async def test_analytics_api_endpoints(client):
     met_res = await client.get("/api/v1/analytics/metrics")
     assert met_res.status_code == 200
     met_data = met_res.json()
-    assert met_data["precision"] > 0.80
-    assert "confusion_matrix" in met_data
+    assert met_data["model_status"] in ["READY", "NOT_TRAINED"]
+    assert "model_name" in met_data
+    if met_data.get("is_trained"):
+        assert "confusion_matrix" in met_data
+        assert met_data["brier_score"] is not None
+    else:
+        assert met_data["precision"] is None
+
 
     # 4. POST /api/v1/analytics/backtest
     bt_res = await client.post(

@@ -54,26 +54,33 @@ interface PlaybackFrame {
 }
 
 interface CalibrationMetrics {
-  precision: number;
-  recall: number;
-  f1_score: number;
-  roc_auc: number;
-  brier_score: number;
-  confusion_matrix: {
+  model_name?: string;
+  dataset_name?: string;
+  is_trained?: boolean;
+  model_status?: string;
+  precision?: number | null;
+  recall?: number | null;
+  f1_score?: number | null;
+  roc_auc?: number | null;
+  pr_auc?: number | null;
+  brier_score?: number | null;
+  confusion_matrix?: {
     true_positives: number;
     false_positives: number;
     false_negatives: number;
     true_negatives: number;
     total_evaluations: number;
-  };
-  lead_time_distribution: {
+  } | null;
+  lead_time_distribution?: {
     mean_lead_time_hours: number;
     median_lead_time_hours: number;
     min_lead_time_hours: number;
     max_lead_time_hours: number;
     hist_bins: Record<string, number>;
-  };
+  } | null;
+  disclaimer?: string;
 }
+
 
 export default function AnalyticsAndCalibrationStudio() {
   const [incidents, setIncidents] = useState<HistoricalIncident[]>([]);
@@ -201,13 +208,17 @@ export default function AnalyticsAndCalibrationStudio() {
               <span className="text-[10px] font-mono uppercase text-indigo-400 font-bold">
                 SIH26001 • MODEL VALIDATION STUDIO
               </span>
-              <span className="bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-mono px-1.5 py-0.2 rounded font-semibold">
-                ROC-AUC: 0.94
+              <span className="bg-amber-950/80 text-amber-300 border border-amber-800 text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase">
+                DEMO / SIMULATED BENCHMARK
+              </span>
+              <span className="bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-mono px-2 py-0.5 rounded">
+                Tier: Baseline Deterministic
               </span>
             </div>
             <h1 className="text-sm sm:text-base font-bold text-slate-100">
               Historical Disaster Playback &amp; Model Calibration Studio
             </h1>
+
           </div>
         </div>
 
@@ -397,81 +408,141 @@ export default function AnalyticsAndCalibrationStudio() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {/* Left: Metrics & Confusion Matrix (6 cols) */}
             <div className="lg:col-span-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
-              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-                <Award className="w-5 h-5 text-amber-400" />
-                <div>
-                  <h3 className="text-sm font-bold text-slate-100">
-                    Statistical Verification &amp; Accuracy Metrics
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-mono">
-                    Historical Re-analysis across 150 seasonal validation events.
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-amber-400" />
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
+                      Statistical Verification &amp; Accuracy Metrics
+                      <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded font-bold uppercase border ${
+                        metrics.is_trained
+                          ? "bg-emerald-950 text-emerald-300 border-emerald-800"
+                          : "bg-amber-950 text-amber-400 border-amber-800"
+                      }`}>
+                        {metrics.is_trained ? "AUTHENTIC HELD-OUT VALIDATION" : "MODEL STATUS: NOT TRAINED"}
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400 font-mono">
+                      {metrics.is_trained
+                        ? `Evaluation on held-out test split (${metrics.confusion_matrix?.total_evaluations ?? 0} samples).`
+                        : "Awaiting training on curated GSI / NASA regional landslide catalogs."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {!metrics.is_trained ? (
+                /* Clear NOT_TRAINED State Panel */
+                <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                  <div className="flex items-center gap-2 text-amber-400 font-mono font-bold text-xs">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                    <span>ML PREDICTION ENGINE: NOT TRAINED</span>
+                  </div>
+                  <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                    No trained machine-learning model artifact has been registered. Operational forecasts currently rely on the deterministic physical baseline engine.
                   </p>
-                </div>
-              </div>
-
-              {/* Accuracy KPI Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">PRECISION</div>
-                  <div className="text-base font-black text-indigo-400">
-                    {(metrics.precision * 100).toFixed(1)}%
+                  <div className="text-[11px] font-mono text-slate-400 bg-slate-900/90 p-3 rounded-lg border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-slate-300">To train a genuine model on historical data:</div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-400">
+                      <li>Drop historical inventory in <code className="text-indigo-400">data/landslide_inventory/</code></li>
+                      <li>Run CLI: <code className="text-emerald-400">python -m backend.app.ml.training.train --inventory ...</code></li>
+                      <li>Held-out precision, recall, and ROC-AUC metrics will populate automatically.</li>
+                    </ol>
                   </div>
                 </div>
-
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">RECALL</div>
-                  <div className="text-base font-black text-emerald-400">
-                    {(metrics.recall * 100).toFixed(1)}%
-                  </div>
-                </div>
-
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">F1-SCORE</div>
-                  <div className="text-base font-black text-purple-400">
-                    {metrics.f1_score.toFixed(3)}
-                  </div>
-                </div>
-
-                <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
-                  <div className="text-[10px] text-slate-400">ROC-AUC</div>
-                  <div className="text-base font-black text-amber-400">
-                    {metrics.roc_auc.toFixed(3)}
-                  </div>
-                </div>
-              </div>
-
-              {/* 2x2 Confusion Matrix */}
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
-                <div className="text-xs font-mono font-bold text-slate-300">
-                  2×2 Confusion Matrix (N = {metrics.confusion_matrix.total_evaluations}):
-                </div>
-                <div className="grid grid-cols-2 gap-2 font-mono text-center text-xs">
-                  <div className="bg-emerald-950/60 p-3 rounded-lg border border-emerald-800">
-                    <div className="text-[10px] text-emerald-400 font-bold uppercase">True Positives (TP)</div>
-                    <div className="text-lg font-black text-emerald-300">{metrics.confusion_matrix.true_positives}</div>
-                    <div className="text-[9px] text-slate-400">Correct Early Warnings</div>
+              ) : (
+                <>
+                  {/* Scientific Transparency Advisory Banner */}
+                  <div className="bg-emerald-950/30 border border-emerald-800/50 rounded-xl p-3 flex items-start gap-2.5 text-xs text-emerald-200 font-mono">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-emerald-300">AUTHENTIC TEST EVALUATION</div>
+                      <div className="text-[11px] text-slate-300 leading-relaxed font-sans">
+                        Metrics below were computed on a held-out test split using leakage-safe temporal and spatial partitioning.
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="bg-amber-950/60 p-3 rounded-lg border border-amber-800">
-                    <div className="text-[10px] text-amber-400 font-bold uppercase">False Positives (FP)</div>
-                    <div className="text-lg font-black text-amber-300">{metrics.confusion_matrix.false_positives}</div>
-                    <div className="text-[9px] text-slate-400">False Alarms (4%)</div>
+                  {/* Accuracy KPI Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-center">
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                      <div className="text-[10px] text-slate-400">PRECISION</div>
+                      <div className="text-base font-black text-indigo-400">
+                        {metrics.precision !== null && metrics.precision !== undefined
+                          ? `${(metrics.precision * 100).toFixed(1)}%`
+                          : "N/A"}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                      <div className="text-[10px] text-slate-400">RECALL</div>
+                      <div className="text-base font-black text-emerald-400">
+                        {metrics.recall !== null && metrics.recall !== undefined
+                          ? `${(metrics.recall * 100).toFixed(1)}%`
+                          : "N/A"}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                      <div className="text-[10px] text-slate-400">F1-SCORE</div>
+                      <div className="text-base font-black text-purple-400">
+                        {metrics.f1_score !== null && metrics.f1_score !== undefined
+                          ? metrics.f1_score.toFixed(3)
+                          : "N/A"}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                      <div className="text-[10px] text-slate-400">ROC-AUC</div>
+                      <div className="text-base font-black text-amber-400">
+                        {metrics.roc_auc !== null && metrics.roc_auc !== undefined
+                          ? metrics.roc_auc.toFixed(3)
+                          : "N/A"}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="bg-red-950/60 p-3 rounded-lg border border-red-800">
-                    <div className="text-[10px] text-red-400 font-bold uppercase">False Negatives (FN)</div>
-                    <div className="text-lg font-black text-red-300">{metrics.confusion_matrix.false_negatives}</div>
-                    <div className="text-[9px] text-slate-400">Missed Events (2.6%)</div>
-                  </div>
+                  {/* 2x2 Confusion Matrix */}
+                  {metrics.confusion_matrix && (
+                    <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                      <div className="text-xs font-mono font-bold text-slate-300 flex items-center justify-between">
+                        <span>2×2 Confusion Matrix (N = {metrics.confusion_matrix.total_evaluations}):</span>
+                        <span className="text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/60 font-bold uppercase">
+                          HELD-OUT TEST SPLIT
+                        </span>
+                      </div>
 
-                  <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
-                    <div className="text-[10px] text-slate-300 font-bold uppercase">True Negatives (TN)</div>
-                    <div className="text-lg font-black text-slate-200">{metrics.confusion_matrix.true_negatives}</div>
-                    <div className="text-[9px] text-slate-400">Correct Stable Baseline</div>
-                  </div>
-                </div>
-              </div>
+                      <div className="grid grid-cols-2 gap-2 font-mono text-center text-xs">
+                        <div className="bg-emerald-950/60 p-3 rounded-lg border border-emerald-800">
+                          <div className="text-[10px] text-emerald-400 font-bold uppercase">True Positives (TP)</div>
+                          <div className="text-lg font-black text-emerald-300">{metrics.confusion_matrix.true_positives}</div>
+                          <div className="text-[9px] text-slate-400">Correct Early Warnings</div>
+                        </div>
+
+                        <div className="bg-amber-950/60 p-3 rounded-lg border border-amber-800">
+                          <div className="text-[10px] text-amber-400 font-bold uppercase">False Positives (FP)</div>
+                          <div className="text-lg font-black text-amber-300">{metrics.confusion_matrix.false_positives}</div>
+                          <div className="text-[9px] text-slate-400">False Alarms</div>
+                        </div>
+
+                        <div className="bg-red-950/60 p-3 rounded-lg border border-red-800">
+                          <div className="text-[10px] text-red-400 font-bold uppercase">False Negatives (FN)</div>
+                          <div className="text-lg font-black text-red-300">{metrics.confusion_matrix.false_negatives}</div>
+                          <div className="text-[9px] text-slate-400">Missed Events</div>
+                        </div>
+
+                        <div className="bg-slate-900 p-3 rounded-lg border border-slate-700">
+                          <div className="text-[10px] text-slate-300 font-bold uppercase">True Negatives (TN)</div>
+                          <div className="text-lg font-black text-slate-200">{metrics.confusion_matrix.true_negatives}</div>
+                          <div className="text-[9px] text-slate-400">Correct Stable Baseline</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
+
 
             {/* Right: Factor Weight Tuning Sandbox (6 cols) */}
             <div className="lg:col-span-6 bg-slate-900/80 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">

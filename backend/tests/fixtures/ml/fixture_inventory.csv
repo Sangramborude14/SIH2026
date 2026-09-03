@@ -1,0 +1,10 @@
+# TEST_FIXTURE_ONLY: Used strictly for automated unit and integration tests. Not scientific ground truth.
+event_id,latitude,longitude,event_date,event_time,state,district,location_name,source,confidence,trigger_type,landslide_size
+GSI-TEST-2020-001,27.3389,88.6065,2020-07-12,14:30:00,Sikkim,East Sikkim,Gangtok North,GSI_NLSM,CONFIRMED,HEAVY_RAIN,LARGE
+GSI-TEST-2020-002,25.1764,93.0177,2020-08-04,,Assam,Dima Hasao,Haflong Hill,GSI_NLSM,CONFIRMED,MONSOON,MEDIUM
+GSI-TEST-2021-003,23.7271,92.7176,2021-06-22,09:15:00,Mizoram,Aizawl,Aizawl Ridge,NASA_GLC,CONFIRMED,HEAVY_RAIN,LARGE
+GSI-TEST-2021-004,24.8170,93.9368,2021-07-18,,Manipur,Noney,Imphal Highway,BRO,CONFIRMED,HEAVY_RAIN,MEDIUM
+GSI-TEST-2022-005,25.5788,91.8933,2022-06-15,18:00:00,Meghalaya,East Khasi Hills,Shillong Peak Bypass,GSI_NLSM,CONFIRMED,HEAVY_RAIN,LARGE
+GSI-TEST-2022-006,27.0844,93.6053,2022-09-02,,Arunachal Pradesh,Papum Pare,Itanagar Road,BRO,CONFIRMED,MONSOON,MEDIUM
+GSI-TEST-2023-007,27.3389,88.6065,2023-07-08,11:45:00,Sikkim,East Sikkim,Gangtok South,GSI_NLSM,CONFIRMED,HEAVY_RAIN,LARGE
+GSI-TEST-2023-008,25.1764,93.0177,2023-08-20,,Assam,Dima Hasao,Haflong Railway,GSI_NLSM,CONFIRMED,MONSOON,LARGE

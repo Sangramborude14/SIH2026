@@ -21,6 +21,10 @@ from backend.app.services.environmental_data_service import (
     EnvironmentalStatePackage,
 )
 
+from backend.app.services.landslide_inference_service import (
+    landslide_inference_service,
+    LandslideInferenceService,
+)
 from backend.app.schemas.engine import (
     AnomalyReport,
     TrendReport,
@@ -37,17 +41,23 @@ class DisasterIntelligenceEngine:
     Strictly separated from data collection.
     Consumes validated EnvironmentalStatePackage from EnvironmentalDataService
     and executes deterministic anomaly detection, trend calculation,
-    multi-signal factor scoring, signal agreement, debounced event transitions,
-    and audit trail persistence.
+    multi-signal factor scoring, signal agreement, real-time ML future landslide inference,
+    debounced event transitions, and audit trail persistence.
     """
 
-    def __init__(self, data_service: Optional[EnvironmentalDataService] = None):
+    def __init__(
+        self,
+        data_service: Optional[EnvironmentalDataService] = None,
+        inference_service: Optional[LandslideInferenceService] = None,
+    ):
         self.data_service = data_service or environmental_data_service
+        self.inference_service = inference_service or landslide_inference_service
         self.anomaly_detector = AnomalyDetector()
         self.trend_analyzer = TrendAnalyzer()
         self.risk_analyzer = landslide_risk_analyzer
         self.risk_aggregator = RiskAggregator()
         self.event_manager = event_manager
+
 
     async def evaluate_location(
         self,
@@ -113,14 +123,41 @@ class DisasterIntelligenceEngine:
         )
         session.add(db_assessment)
 
-        # 7. Stage 9: Process Event Lifecycle State Machine
+        # 7. Stage 8.5: Real-Time ML Future Landslide Inference (Task B)
+        forecast_res = await self.inference_service.generate_forecast_for_location(
+            session=session,
+            location=location,
+            latest_obs=latest_raw,
+            obs_history=observations,
+            deterministic_risk_score=assessment_output.risk_score,
+            deterministic_risk_level=assessment_output.risk_level.value,
+            persist=True,
+        )
+
+        p24 = None
+        if forecast_res.forecast_available and "24h" in forecast_res.forecast:
+            p24 = forecast_res.forecast["24h"].landslide_probability
+
+        assessment_output.forecast_probabilities = {
+            h: detail.landslide_probability
+            for h, detail in forecast_res.forecast.items()
+            if detail.landslide_probability is not None
+        }
+        assessment_output.forecast_available = forecast_res.forecast_available
+        assessment_output.ml_model_status = forecast_res.model_status
+        assessment_output.ml_model_version = forecast_res.model_version
+        assessment_output.observed_drivers = forecast_res.observed_drivers
+
+        # 8. Stage 9: Process Event Lifecycle State Machine (Dual-Signal: Risk Score + ML Probability)
         event, action = await self.event_manager.process_assessment_event(
             session=session,
             location=location,
-            assessment=assessment_output
+            assessment=assessment_output,
+            forecast_probability=p24,
         )
 
-        # 8. Persist Detailed Assessment History for Auditing & Trend Analysis
+        # 9. Persist Detailed Assessment History for Auditing & Trend Analysis
+
         history_record = RiskAssessmentHistory(
             event_id=event.id if event else None,
             location_id=location.id,
@@ -194,8 +231,14 @@ class DisasterIntelligenceEngine:
             } if assessment.signal_agreement else None,
             summary=assessment.reason,
             timestamp=assessment.timestamp,
-            engine_version=assessment.engine_version
+            engine_version=assessment.engine_version,
+            forecast_probabilities=assessment.forecast_probabilities,
+            forecast_available=assessment.forecast_available,
+            ml_model_status=assessment.ml_model_status,
+            ml_model_version=assessment.ml_model_version,
+            observed_drivers=assessment.observed_drivers,
         )
+
 
     async def run_pipeline(
         self,

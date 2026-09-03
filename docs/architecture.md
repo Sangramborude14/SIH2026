@@ -155,8 +155,39 @@ flowchart TD
 
 ---
 
-## 4. Separation of Concerns
+## 4. Landslide AI/ML Subsystem Architecture (`backend/app/ml/`)
+
+The architecture formally decouples **Environmental Anomaly Detection (Task A)** from **Landslide Occurrence Probability Forecasting (Task B)**:
+
+```text
+SPATIO-TEMPORAL TELEMETRY & TERRAIN METADATA
+                     │
+                     ▼
+Feature Extractor (`backend/app/ml/features/feature_extractor.py`)
+  - 15 Standardized Numerical Attributes
+  - 100% Provenance Tagging (OBSERVED, FORECAST, SATELLITE, MODEL_DERIVED, STATIC, SIMULATED)
+                     │
+         ┌───────────┴───────────┐
+         ▼                       ▼
+Task A: Environmental Anomaly   Task B: Landslide Predictor
+  (`backend/app/ml/anomaly/`)     (`backend/app/ml/prediction/`)
+  - Evaluates hydrologic          - Evaluates P(Landslide | features)
+    unorthodoxy (0.0 to 1.0)      - Horizons: 6-Hour, 12-Hour, 24-Hour
+  - Tier: NORMAL / ELEVATED /     - Tier: Baseline Deterministic
+    SEVERE / EXTREME              - Awaiting Curated GSI/IMD Datasets
+```
+
+### Architectural Principles:
+1. **Separation of Anomaly and Failure Probability**: Abnormal environmental behaviour is a necessary but insufficient condition for slope failure. They remain separate analytical outputs.
+2. **Data Provenance Invariance**: Every feature carries strict classification tags to prevent demo or simulated fixtures from being confused with live telemetry.
+3. **Model Registry & Manifests** (`backend/app/ml/registry/model_registry.py`): Tracks versioned models, metadata manifests, and operational states.
+4. **Authentic Metric Calculations** (`backend/app/ml/evaluation/metrics.py`): Precision, Recall, F1, ROC-AUC, and Brier scores are computed through mathematically exact algorithms from ground truth arrays, preventing hardcoded metrics from being misrepresented as trained accuracy.
+
+---
+
+## 5. Separation of Concerns
 
 1. **Deterministic Processing**: No stochastic or LLM hallucinations in the risk calculation pathway.
-2. **Modular Components**: Each analyzer (`AnomalyDetector`, `TrendAnalyzer`, `LandslideRiskAnalyzer`, `EventManager`) is isolated, testable, and independently upgradeable (ready to plug in ML models later).
-3. **Transparent Traceability**: Every score generated is accompanied by contributing factors and baseline departure metrics.
+2. **Modular Components**: Each analyzer (`AnomalyDetector`, `TrendAnalyzer`, `LandslideRiskAnalyzer`, `EventManager`) is isolated, testable, and independently upgradeable.
+3. **Transparent Traceability**: Every score generated is accompanied by contributing factors, provenance tags, and baseline departure metrics.
+

@@ -59,17 +59,24 @@ class LeadTimeDistribution(BaseModel):
 
 
 class CalibrationMetricsResponse(BaseModel):
-    model_name: str = "NER Multi-Signal Landslide Intelligence Pipeline v2.4"
-    dataset_name: str = "North Eastern Region Historical Re-analysis (2018-2024)"
-    precision: float
-    recall: float
-    f1_score: float
-    roc_auc: float
-    brier_score: float
-    confusion_matrix: ConfusionMatrix
-    lead_time_distribution: LeadTimeDistribution
-    current_factor_weights: Dict[str, float]
-    verified_disaster_events_count: int
+    model_name: str = "NER Multi-Signal Landslide Predictive Model"
+    dataset_name: str = "GSI NLSM / NASA GLC Regional Catalog"
+    is_trained: bool = False
+    model_status: str = "NOT_TRAINED"
+    precision: Optional[float] = None
+    recall: Optional[float] = None
+    f1_score: Optional[float] = None
+    roc_auc: Optional[float] = None
+    pr_auc: Optional[float] = None
+    brier_score: Optional[float] = None
+    confusion_matrix: Optional[ConfusionMatrix] = None
+    lead_time_distribution: Optional[LeadTimeDistribution] = None
+    current_factor_weights: Optional[Dict[str, float]] = None
+    verified_disaster_events_count: int = 0
+    is_simulated: bool = False
+    data_mode: str = "AUTHENTIC_VALIDATION"
+    disclaimer: str = "Model status: NOT_TRAINED. Awaiting training on regional ground-truth dataset."
+
 
 
 # --- Backtest Sandbox Schemas ---
@@ -99,3 +106,6 @@ class BacktestResponse(BaseModel):
     confusion_matrix: ConfusionMatrix
     comparison_with_baseline: Dict[str, Any]
     recommendation: str
+    is_simulated: bool = True
+    data_mode: str = "DEMO_SIMULATED"
+

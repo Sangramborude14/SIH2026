@@ -52,8 +52,13 @@ class Settings(BaseSettings):
     # Ingestion & Data Mode: "LIVE" (Open-Meteo with fallback) or "SIMULATION" (deterministic scenarios)
     DATA_MODE: str = "LIVE"
 
+    # Scheduling Cadence Separation (Seconds)
+    ENGINE_ASSESSMENT_INTERVAL_SECONDS: int = 30
+    LIVE_INGESTION_INTERVAL_SECONDS: int = 900
+
     # External Provider Configuration (Open-Meteo - Free Public API)
     OPEN_METEO_API_URL: str = "https://api.open-meteo.com/v1/forecast"
+
     WEATHER_REQUEST_TIMEOUT_SECONDS: float = 7.0
     WEATHER_MAX_RETRIES: int = 2
     WEATHER_BACKOFF_FACTOR: float = 0.5

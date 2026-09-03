@@ -22,7 +22,15 @@ export interface LocationMapItem {
   trajectory?: string;
   primary_factor?: string;
   last_updated: string;
+  anomaly_score?: number | null;
+  anomaly_level?: string | null;
+  forecast_probabilities?: Record<string, number>;
+  forecast_available?: boolean;
+  model_version?: string | null;
+  model_status?: string | null;
+  data_freshness?: string;
 }
+
 
 
 export interface FactorDetail {

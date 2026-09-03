@@ -11,7 +11,7 @@ from backend.app.services.location_service import LocationService
 from backend.app.api.v1.router import api_router
 
 
-from backend.app.engine.scheduler import background_engine_scheduler
+from backend.app.engine.scheduler import background_engine_scheduler, live_ingestion_scheduler
 from backend.app.engine.status import engine_status_tracker
 
 
@@ -29,12 +29,16 @@ async def lifespan(app: FastAPI):
 
     # Start automated background assessment engine scheduler
     background_engine_scheduler.start()
+    # Start dedicated continuous live telemetry ingestion scheduler
+    live_ingestion_scheduler.start()
 
     yield
 
     # Shutdown
     logger.info("Shutting down application...")
+    live_ingestion_scheduler.stop()
     background_engine_scheduler.stop()
+
 
 
 app = FastAPI(

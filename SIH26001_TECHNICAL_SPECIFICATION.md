@@ -61,7 +61,46 @@ To eliminate alert flicker from momentary sensor fluctuations, event state trans
 
 ---
 
-## 4. Agentic AI Guardrails & Scientific Invariance
+## 4. AI/ML Predictive Analytics Formulation & Task Separation
+
+The system formally decouples **Environmental Anomaly Detection (Task A)** from **Landslide Occurrence Probability Forecasting (Task B)**:
+
+### Task A: Environmental Anomaly Model Formulation
+Quantifies statistical unorthodoxy of hydrometeorological telemetry relative to historical baseline:
+$$A_{\text{env}} = w_{\text{rain}} \cdot A_{\text{rain}}(Z_P, P_{1h}) + w_{\text{soil}} \cdot A_{\text{soil}}(\theta, \dot{\theta}) + w_{\text{hydro}} \cdot A_{\text{hydro}}(I / I_{\text{crit}}, API)$$
+
+* $A_{\text{env}} \in [0.0, 1.0]$, classified as `NORMAL` ($<0.30$), `ELEVATED` ($0.30 - 0.60$), `SEVERE` ($0.60 - 0.85$), or `EXTREME` ($\ge 0.85$).
+* **Invariant:** An extreme environmental anomaly signifies abnormal moisture/rainfall, but does NOT by itself constitute a slope failure forecast.
+
+### Task B: Landslide Occurrence Probability Formulation
+Estimates the conditional probability of slope failure within a specific future forecast horizon $H \in \{6\,\text{h}, 12\,\text{h}, 24\,\text{h}\}$:
+$$P(Y_{t+H} = 1 \mid \mathbf{X}_t) = \sigma\left(\mathbf{w}_H^T \phi(\mathbf{X}_t) + b_H\right)$$
+
+Where $\mathbf{X}_t$ represents the 15-dimensional standardized feature vector:
+1. `slope_angle` (Static topographic gradient, °)
+2. `elevation` (Static elevation ASL, m)
+3. `baseline_susceptibility` (Static geological vulnerability index, 0–1)
+4. `rainfall_1h`, `rainfall_6h`, `rainfall_24h`, `rainfall_72h` (Precipitation accumulation windows, mm)
+5. `soil_moisture_surface`, `soil_moisture_middle`, `soil_moisture_deep` (Pore saturation strata, %)
+6. `antecedent_precipitation_index` (Decaying moisture index, API)
+7. `consecutive_wet_hours` (Continuous precipitation duration, h)
+8. `rainfall_z_score_24h` (Standardized departure, $\sigma$)
+9. `soil_moisture_trend_slope` (Saturation infiltration rate, %/step)
+10. `id_curve_ratio` (Intensity-Duration critical threshold ratio)
+
+### Strict Data Provenance Classification
+Every feature attribute must carry immutable provenance metadata:
+* **`OBSERVED`:** Real-time sensor gauge or live API measurement.
+* **`FORECAST`:** Numerical weather prediction (NWP) model output.
+* **`SATELLITE`:** Earth Observation remote sensing (ISRO Bhoonidhi / Sentinel).
+* **`MODEL_DERIVED`:** Deterministically computed physical indicators (API, I-D ratio).
+* **`STATIC`:** Survey DEM / geological susceptibility maps.
+* **`SIMULATED`:** Synthetic testing or backtesting fixtures.
+
+---
+
+## 5. Agentic AI Guardrails & Scientific Invariance
+
 
 The system implements the **Scientific Invariance Guardrail**:
 
@@ -84,7 +123,7 @@ The system implements the **Scientific Invariance Guardrail**:
 
 ---
 
-## 5. Common Alerting Protocol (CAP v1.2) Compliance
+## 6. Common Alerting Protocol (CAP v1.2) Compliance
 
 The CAP export engine implements the **OASIS Standard CAP v1.2 / ITU-T X.1303**:
 * **XML Namespace:** `urn:oasis:names:tc:emergency:cap:1.2`
@@ -97,7 +136,8 @@ The CAP export engine implements the **OASIS Standard CAP v1.2 / ITU-T X.1303**:
 
 ---
 
-## 6. North Eastern Region Geographical Coordinates
+## 7. North Eastern Region Geographical Coordinates
+
 
 * **Gangtok, Sikkim:** $27.3389^\circ\text{N}, 88.6065^\circ\text{E}$ (Slope: $38.5^\circ$)
 * **Haflong, Assam:** $25.1764^\circ\text{N}, 93.0177^\circ\text{E}$ (Slope: $34.0^\circ$)

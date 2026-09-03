@@ -26,6 +26,11 @@ from backend.app.models.analytics import (
     HistoricalDisasterIncident,
     ModelEvaluationRun,
 )
+from backend.app.models.ml_forecast import LandslideForecastRecord
+from backend.app.models.weather_forecast import WeatherForecastSnapshot
+from backend.app.models.landslide_event import LandslideEvent, TimePrecision
+from backend.app.models.ml_model_record import MLModelVersionRecord
+
 
 __all__ = [
     "Location",
@@ -48,5 +53,12 @@ __all__ = [
     "DeviceToken",
     "HistoricalDisasterIncident",
     "ModelEvaluationRun",
+    "LandslideForecastRecord",
+    "WeatherForecastSnapshot",
+    "LandslideEvent",
+    "TimePrecision",
+    "MLModelVersionRecord",
 ]
+
+
 

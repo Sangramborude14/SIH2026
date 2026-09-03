@@ -34,7 +34,11 @@ interface CommandHeaderProps {
   bhoonidhiStatus?: string;
   fieldActiveCount?: number;
   onOpenBroadcast?: () => void;
+  mlModelStatus?: string;
+  mlModelVersion?: string;
+  mlIsTrained?: boolean;
 }
+
 
 export default function CommandHeader({
   engineOnline,
@@ -54,6 +58,9 @@ export default function CommandHeader({
   bhoonidhiStatus = "NOT_CONFIGURED",
   fieldActiveCount = 0,
   onOpenBroadcast,
+  mlModelStatus = "READY",
+  mlModelVersion = "2.0.0",
+  mlIsTrained = true,
 }: CommandHeaderProps) {
   const isLiveMode = dataMode.toUpperCase() === "LIVE";
   const displayEngineStatus = isRunningEngine ? "RUNNING" : (engineOnline ? engineStatusText : "OFFLINE");
@@ -70,18 +77,19 @@ export default function CommandHeader({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase font-bold">
-                SIH26001 • North Eastern Region Landslide Decision Support System
+              <span className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase font-bold">
+                SIH26001 &bull; NORTH EASTERN REGION EARLY WARNING
               </span>
               <span className="bg-zinc-900 text-zinc-300 border border-zinc-700 text-[10px] font-mono px-1.5 py-0.2 rounded font-bold">
-                v1.0.0
+                v2.0.0 AI/ML
               </span>
             </div>
             <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-              Disaster Intelligence Command Center
+              AI-Based Landslide Prediction &amp; Early-Warning System
             </h1>
           </div>
         </div>
+
 
         {/* Right: Operational Controls */}
         <div className="flex items-center gap-2 flex-wrap text-xs font-mono">
@@ -203,6 +211,15 @@ export default function CommandHeader({
               {engineOnline ? "READY" : "OFFLINE"}
             </span>
           </div>
+
+          <span className="text-zinc-700">|</span>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-zinc-500 uppercase font-semibold">ML MODEL:</span>
+            <span className={`font-black ${mlIsTrained ? "text-emerald-400" : "text-amber-400"}`}>
+              {mlIsTrained ? `READY (${mlModelVersion || 'v2.0.0'})` : "NOT TRAINED (PHYSICS BASELINE)"}
+            </span>
+          </div>
         </div>
 
         <div className="text-zinc-500 text-[10px]">
@@ -214,12 +231,14 @@ export default function CommandHeader({
       <div className="px-4 sm:px-6 bg-black flex items-center justify-between text-xs font-mono">
         <nav className="flex items-center gap-1">
           {[
-            { id: "overview", label: "Overview", icon: Layers },
-            { id: "stations", label: "Stations", icon: MapPin },
-            { id: "events", label: "Events", icon: AlertTriangle },
+            { id: "overview", label: "Overview & Early Warning", icon: Layers },
+            { id: "stations", label: "Stations 360", icon: MapPin },
+            { id: "events", label: "Events Queue", icon: AlertTriangle },
+            { id: "analytics", label: "Model Analytics", icon: Activity, isExternal: true, href: "/analytics" },
             { id: "field", label: "Field Operations", icon: Radio, isExternal: true, href: "/field" },
             { id: "broadcast", label: "Broadcast", icon: Send, isAction: true },
           ].map((item) => {
+
             const isActive = activeTab === item.id;
             const Icon = item.icon;
 

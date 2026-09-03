@@ -197,4 +197,10 @@ class AssessmentOutput:
     is_persistent_rain: bool = False
     is_increasing_rain: bool = False
     engine_version: str = "1.0.0"
+    forecast_probabilities: Dict[str, float] = field(default_factory=dict)
+    forecast_available: bool = False
+    ml_model_status: str = "NOT_TRAINED"
+    ml_model_version: Optional[str] = None
+    observed_drivers: List[str] = field(default_factory=list)
+
 

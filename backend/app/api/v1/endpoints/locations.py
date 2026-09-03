@@ -9,6 +9,9 @@ from backend.app.models.weather import WeatherObservation
 from backend.app.models.risk import RiskAssessment
 from backend.app.models.event import DisasterEvent
 from backend.app.models.history import RiskAssessmentHistory
+from backend.app.models.ml_forecast import LandslideForecastRecord
+from backend.app.ml.registry.model_registry import model_registry
+
 from backend.app.schemas.location import LocationResponse
 from backend.app.schemas.weather import WeatherObservationResponse
 from backend.app.schemas.risk import RiskAssessmentResponse
@@ -81,6 +84,46 @@ async def get_locations_for_map(db: AsyncSession = Depends(get_db)):
         weather_res = await db.execute(weather_stmt)
         latest_weather = weather_res.scalars().first()
 
+        # Query latest ML forecast records
+        fc_stmt = (
+            select(LandslideForecastRecord)
+            .where(LandslideForecastRecord.location_id == loc.id)
+            .order_by(LandslideForecastRecord.prediction_timestamp.desc())
+            .limit(3)
+        )
+        fc_res = await db.execute(fc_stmt)
+        fc_records = list(fc_res.scalars().all())
+
+        forecast_probs: dict = {}
+        model_version = "2.0.0"
+        model_status = "READY" if model_registry.is_trained_model_active() else "NOT_TRAINED"
+        data_freshness = "FRESH"
+        for fc in fc_records:
+            h_key = fc.forecast_horizon.lower()
+            if fc.probability is not None:
+                forecast_probs[h_key] = fc.probability
+            model_version = fc.model_version
+            model_status = fc.model_status
+            data_freshness = fc.data_freshness
+
+        # If no persisted forecast yet but trained model is active, generate now
+        if not forecast_probs and model_registry.is_trained_model_active():
+            from backend.app.services.landslide_inference_service import landslide_inference_service
+            quick_fc = await landslide_inference_service.generate_forecast_for_location(
+                session=db,
+                location=loc,
+                latest_obs=latest_weather,
+                obs_history=[latest_weather] if latest_weather else [],
+                deterministic_risk_score=latest_risk.risk_score if latest_risk else 10.0,
+                deterministic_risk_level=latest_risk.risk_level if latest_risk else "LOW",
+                persist=True,
+            )
+            for h_str, h_det in quick_fc.forecast.items():
+                if h_det.landslide_probability is not None:
+                    forecast_probs[h_str] = h_det.landslide_probability
+            data_freshness = quick_fc.data_freshness
+            model_status = quick_fc.model_status
+
         item = LocationMapItem(
             id=loc.id,
             name=loc.name,
@@ -102,11 +145,19 @@ async def get_locations_for_map(db: AsyncSession = Depends(get_db)):
             rainfall_1h=latest_weather.rainfall_1h if latest_weather else 0.0,
             soil_moisture=latest_weather.soil_moisture if latest_weather else 30.0,
             trend_direction="INCREASING" if (latest_weather and (latest_weather.rainfall_1h or 0) > 10) else "STABLE",
-            last_updated=latest_risk.timestamp if latest_risk else datetime.now(timezone.utc)
+            last_updated=latest_risk.timestamp if latest_risk else datetime.now(timezone.utc),
+            anomaly_score=round(min(1.0, (latest_weather.rainfall_24h or 0.0) / 150.0), 3) if latest_weather else 0.05,
+            anomaly_level="SEVERE" if (latest_weather and (latest_weather.rainfall_24h or 0) >= 120) else ("ELEVATED" if (latest_weather and (latest_weather.rainfall_24h or 0) >= 60) else "NORMAL"),
+            forecast_probabilities=forecast_probs,
+            forecast_available=bool(forecast_probs),
+            model_version=model_version,
+            model_status=model_status,
+            data_freshness=data_freshness,
         )
         map_items.append(item)
 
     return map_items
+
 
 
 @router.get("/{location_id}", response_model=LocationResponse)

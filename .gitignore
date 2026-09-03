@@ -37,5 +37,19 @@ yarn-error.log*
 *.swo
 
 # OS
-.DS_Store
+*.DS_Store
 Thumbs.db
+
+# Machine Learning Datasets & Large Artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+*.parquet
+*.csv.gz
+*.zip
+*.zip.sha256
+artifacts/models/*
+!artifacts/models/.gitkeep
+!artifacts/models/landslide_24h/.gitkeep
+

@@ -16,6 +16,7 @@ from backend.app.api.v1.endpoints import (
     analytics,
     earth_observation,
     notifications,
+    ml,
 )
 
 api_router = APIRouter()
@@ -36,4 +37,6 @@ api_router.include_router(alerts.router, prefix="/alerts", tags=["CAP Feeds, Sit
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Push Notifications & FCM Device Registry"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["Historical Analytics, Playback & Calibration"])
 api_router.include_router(earth_observation.router, prefix="/earth-observation", tags=["Earth Observation & Bhoonidhi"])
+api_router.include_router(ml.router, prefix="/ml", tags=["Landslide ML Early Warning & Predictive Analytics"])
+
 

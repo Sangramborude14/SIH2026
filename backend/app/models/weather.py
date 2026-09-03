@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 import uuid
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Index
+from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.orm import relationship
 from backend.app.core.database import Base
 
@@ -37,12 +37,12 @@ class WeatherObservation(Base):
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-
-
     # Relationships
     location = relationship("Location", back_populates="observations")
 
     __table_args__ = (
         Index("idx_weather_loc_time", "location_id", "timestamp"),
         Index("idx_weather_loc_source", "location_id", "source"),
+        UniqueConstraint("location_id", "timestamp", "source", "observation_type", name="uq_weather_loc_time_source_type"),
     )
+

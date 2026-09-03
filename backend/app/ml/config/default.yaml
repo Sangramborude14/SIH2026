@@ -1,0 +1,46 @@
+# SIH26001 Landslide Early Warning ML Configuration
+version: "2.0.0"
+forecast_horizon_hours: 24
+random_seed: 42
+decision_threshold: 0.50
+
+dataset:
+  source: synthetic  # Options: synthetic, real, mixed
+  synthetic_samples: 25000
+  synthetic_output: "data/processed/synthetic_landslide_v1.parquet"
+  inventory_path: "data/landslide_inventory/template_inventory.csv"
+
+split:
+  strategy: grouped_temporal
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  group_column: scenario_id
+
+models:
+  - name: logistic_regression
+    tier: TABULAR_ML_LOGISTIC
+    class_weight: balanced
+    max_iter: 1000
+    C: 1.0
+
+  - name: random_forest
+    tier: TABULAR_ML_RANDOM_FOREST
+    class_weight: balanced_subsample
+    n_estimators: 100
+    max_depth: 8
+    min_samples_leaf: 2
+
+  - name: hist_gradient_boosting
+    tier: TABULAR_ML_GRADIENT_BOOST
+    class_weight: balanced
+    max_iter: 100
+    max_depth: 6
+
+calibration:
+  method: isotonic
+  cv: 3
+
+artifacts:
+  output_dir: "artifacts/models/landslide_24h/v2.0.0"
+  active_model_dir: "backend/models/landslide"

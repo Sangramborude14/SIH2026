@@ -1,0 +1,206 @@
+{
+  "schema_version": "1.0.0",
+  "feature_count": 25,
+  "features": [
+    {
+      "name": "slope_angle",
+      "type": "float",
+      "unit": "degrees",
+      "min": 0.0,
+      "max": 90.0,
+      "default": 30.0
+    },
+    {
+      "name": "elevation",
+      "type": "float",
+      "unit": "m",
+      "min": 0.0,
+      "max": 8000.0,
+      "default": 1000.0
+    },
+    {
+      "name": "aspect_sin",
+      "type": "float",
+      "unit": "rad",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0
+    },
+    {
+      "name": "aspect_cos",
+      "type": "float",
+      "unit": "rad",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 1.0
+    },
+    {
+      "name": "baseline_susceptibility",
+      "type": "float",
+      "unit": "score",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.5
+    },
+    {
+      "name": "rainfall_1h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 300.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_3h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 500.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_6h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 600.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_12h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 800.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_24h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 1000.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_48h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 1500.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_72h",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 2000.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_7d",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 3000.0,
+      "default": 0.0
+    },
+    {
+      "name": "consecutive_wet_hours",
+      "type": "float",
+      "unit": "hours",
+      "min": 0.0,
+      "max": 720.0,
+      "default": 0.0
+    },
+    {
+      "name": "antecedent_precipitation_index",
+      "type": "float",
+      "unit": "API",
+      "min": 0.0,
+      "max": 500.0,
+      "default": 0.0
+    },
+    {
+      "name": "rainfall_z_score_24h",
+      "type": "float",
+      "unit": "sigma",
+      "min": -5.0,
+      "max": 15.0,
+      "default": 0.0
+    },
+    {
+      "name": "id_curve_ratio",
+      "type": "float",
+      "unit": "ratio",
+      "min": 0.0,
+      "max": 10.0,
+      "default": 0.0
+    },
+    {
+      "name": "soil_moisture_surface",
+      "type": "float",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "default": 35.0
+    },
+    {
+      "name": "soil_moisture_middle",
+      "type": "float",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "default": 35.0
+    },
+    {
+      "name": "soil_moisture_deep",
+      "type": "float",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "default": 35.0
+    },
+    {
+      "name": "soil_moisture_change_6h",
+      "type": "float",
+      "unit": "%",
+      "min": -50.0,
+      "max": 50.0,
+      "default": 0.0
+    },
+    {
+      "name": "soil_moisture_change_24h",
+      "type": "float",
+      "unit": "%",
+      "min": -80.0,
+      "max": 80.0,
+      "default": 0.0
+    },
+    {
+      "name": "month_sin",
+      "type": "float",
+      "unit": "rad",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.0
+    },
+    {
+      "name": "month_cos",
+      "type": "float",
+      "unit": "rad",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 1.0
+    },
+    {
+      "name": "is_monsoon_season",
+      "type": "float",
+      "unit": "binary",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.0
+    }
+  ]
+}
