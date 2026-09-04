@@ -20,7 +20,7 @@ async def liveness_probe():
     """Kubernetes / Container Liveness Probe."""
     return {
         "status": "ALIVE",
-        "service": "SIH26001 Disaster Intelligence Engine",
+        "service": "DISASTRA Disaster Intelligence Engine",
         "environment": settings.ENVIRONMENT,
         "application_mode": settings.DATA_MODE,
         "timestamp": datetime.now(timezone.utc).isoformat()

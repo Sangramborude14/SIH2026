@@ -76,16 +76,15 @@ export default function CommandHeader({
             NDMA
           </div>
           <div>
-            <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono tracking-widest text-emerald-400 uppercase font-bold">
-                SIH26001 &bull; NORTH EASTERN REGION EARLY WARNING
+                DISASTRA &bull; NORTH EASTERN REGION EARLY WARNING
               </span>
               <span className="bg-zinc-900 text-zinc-300 border border-zinc-700 text-[10px] font-mono px-1.5 py-0.2 rounded font-bold">
                 v2.0.0 AI/ML
               </span>
             </div>
             <h1 className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-2">
-              AI-Based Landslide Prediction &amp; Early-Warning System
+              DISASTRA Command Center
             </h1>
           </div>
         </div>

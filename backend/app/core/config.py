@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "SIH26001 - Disaster Intelligence Engine (NER Landslide)"
+    PROJECT_NAME: str = "DISASTRA - Disaster Intelligence Engine (NER Landslide)"
     VERSION: str = "1.0.0"
     ENGINE_VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"

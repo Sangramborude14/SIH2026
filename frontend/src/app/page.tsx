@@ -596,7 +596,7 @@ export default function CommandCenter() {
 
       {/* 7. Understated Footer */}
       <footer className="border-t border-zinc-900 px-5 py-2 text-center text-[10px] text-zinc-600 font-mono">
-        SIH 2026 Problem Statement SIH26001 | Central Disaster Intelligence Command Center &amp; Field Rescue Network
+        DISASTRA | Central Disaster Intelligence Command Center &amp; Field Rescue Network
       </footer>
     </div>
   );

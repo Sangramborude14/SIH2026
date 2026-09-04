@@ -45,7 +45,7 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description=(
-        "MVP Disaster Intelligence Engine for SIH26001: AI-Based Early Warning and "
+        "MVP Disaster Intelligence Engine for DISASTRA: AI-Based Early Warning and "
         "Landslide Risk Monitoring System in the North Eastern Region (NER)."
     ),
     openapi_url=f"{settings.API_V1_STR}/openapi.json",

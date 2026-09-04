@@ -425,7 +425,7 @@ export default function PublicDisasterAlertPage() {
 
       {/* 3. Public Footer */}
       <footer className="border-t border-slate-800/80 px-4 py-3 bg-slate-950 text-center text-[10px] font-mono text-slate-500 space-y-1">
-        <div>SIH26001 Early Warning System • Public Citizen Advisory Portal</div>
+        <div>DISASTRA Early Warning System • Public Citizen Advisory Portal</div>
         <div className="text-slate-600">Follow official instructions from district disaster management authorities.</div>
       </footer>
     </div>

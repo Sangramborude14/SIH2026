@@ -7,7 +7,7 @@ def run_environment_check() -> bool:
     Validates deployment environment variables without printing any secret values or credentials.
     """
     print("==================================================================")
-    print("SIH26001 Disaster Intelligence Command Center Environment Check")
+    print("DISASTRA Disaster Intelligence Command Center Environment Check")
     print("==================================================================")
     print(f"ENVIRONMENT: {settings.ENVIRONMENT}")
     print(f"DATA_MODE: {settings.DATA_MODE}")

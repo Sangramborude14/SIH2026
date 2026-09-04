@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SIH26001 - Disaster Intelligence Engine (NER Landslides)",
+  title: "DISASTRA - Disaster Intelligence Engine (NER Landslides)",
   description: "AI-Based Early Warning and Landslide Risk Monitoring System in the North Eastern Region",
 };
 

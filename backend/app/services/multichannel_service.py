@@ -86,7 +86,7 @@ class MultiChannelAlertService:
             f"<li>Enforce transit restrictions on arterial mountain bypasses.</li>"
             f"<li>Deploy SDRF / NDRF quick response units to vulnerable road corridors.</li>"
             f"</ul>"
-            f"<p><em>Issued by SIH26001 AI Disaster Intelligence Engine ({settings.DATA_MODE} Mode)</em></p>"
+            f"<p><em>Issued by DISASTRA AI Disaster Intelligence Engine ({settings.DATA_MODE} Mode)</em></p>"
         )
         email_payload = EmailPayload(
             subject=f"URGENT: {ev.severity} Landslide Alert - {loc.district}, {loc.state}",

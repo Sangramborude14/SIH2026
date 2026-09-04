@@ -415,7 +415,7 @@ class PublicRiskService:
         }
 
         provenance = {
-            "source_engine": "SIH26001 Disaster Intelligence Engine",
+            "source_engine": "DISASTRA Disaster Intelligence Engine",
             "assessment_time": ev.updated_at.isoformat(),
             "data_mode": settings.DATA_MODE,
             "notice": "Demonstration Early Warning System. Verify with official district administration advisories."

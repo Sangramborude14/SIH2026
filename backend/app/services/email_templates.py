@@ -58,7 +58,7 @@ class EmailTemplateRenderer:
   <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 24px;">
     <div style="border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 16px;">
       <h2 style="margin: 0; font-size: 18px; color: #111827; text-transform: uppercase;">NDMA / SDMA Landslide Early Warning Bulletin</h2>
-      <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">Issued by SIH26001 Disaster Intelligence Engine ({settings.DATA_MODE} Mode)</p>
+      <p style="margin: 4px 0 0 0; font-size: 12px; color: #6b7280;">Issued by DISASTRA Disaster Intelligence Engine ({settings.DATA_MODE} Mode)</p>
     </div>
 
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
@@ -108,7 +108,7 @@ PRIMARY RISK DRIVERS:
 {drivers_text}
 
 View in Command Portal: {event_link}
-Issued by SIH26001 Disaster Intelligence Engine ({settings.DATA_MODE} Mode)
+Issued by DISASTRA Disaster Intelligence Engine ({settings.DATA_MODE} Mode)
 """
         return {"subject": subject, "html": html_body, "text": text_body}
 
