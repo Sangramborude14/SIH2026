@@ -204,6 +204,13 @@ export default function PublicDisasterAlertPage() {
 
           <div className="flex items-center gap-2">
             <Link
+              href="/citizen"
+              className="text-[11px] font-mono bg-red-950/80 hover:bg-red-900/90 text-red-300 font-bold px-2.5 py-1.5 rounded-lg border border-red-800 flex items-center gap-1 transition"
+            >
+              <Shield className="w-3.5 h-3.5 text-red-400" />
+              <span>Citizen SOS App</span>
+            </Link>
+            <Link
               href="/public/alerts"
               className="text-[11px] font-mono bg-slate-950 hover:bg-slate-800 text-indigo-300 px-2.5 py-1.5 rounded-lg border border-slate-800 flex items-center gap-1 transition"
             >

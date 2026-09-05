@@ -1,42 +1,39 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   DashboardSummaryData,
   LocationMapItem,
   DisasterEventItem,
-  RiskAssessmentItem,
-  WeatherObservationItem,
-  EventTimelineMilestoneItem,
-  ProviderHealthItem,
 } from "@/components/dashboard/types";
 import CommandHeader from "@/components/dashboard/CommandHeader";
 import KPICards from "@/components/dashboard/KPICards";
 import RiskMap from "@/components/dashboard/RiskMap";
-import ActiveEventsList from "@/components/dashboard/ActiveEventsList";
-import EventDetailPanel from "@/components/dashboard/EventDetailPanel";
-import LocationInvestigateModal from "@/components/dashboard/LocationInvestigateModal";
-import AssessmentExplanationModal from "@/components/dashboard/AssessmentExplanationModal";
-import SimulationPanel from "@/components/dashboard/SimulationPanel";
-import FieldOperationsPanel from "@/components/dashboard/FieldOperationsPanel";
-import BroadcastModal from "@/components/dashboard/BroadcastModal";
-import SitRepModal from "@/components/dashboard/SitRepModal";
 import LocationPriorityTable from "@/components/dashboard/LocationPriorityTable";
-import StationIntelPanel from "@/components/dashboard/StationIntelPanel";
-import ForecastProgressionTimeline from "@/components/dashboard/ForecastProgressionTimeline";
-import { ShieldCheck, Info, Server, Activity, Database, CheckCircle2, Radio, MapPin, Layers, Sliders } from "lucide-react";
-
-
+import {
+  AlertTriangle,
+  AlertOctagon,
+  ShieldAlert,
+  ChevronRight,
+  CheckCircle2,
+  ExternalLink,
+  MapPin,
+  ArrowUpRight,
+  Clock,
+  Sparkles,
+} from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function CommandCenter() {
+  const router = useRouter();
+
   // Operational state
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [locations, setLocations] = useState<LocationMapItem[]>([]);
   const [events, setEvents] = useState<DisasterEventItem[]>([]);
-  const [providers, setProviders] = useState<ProviderHealthItem[]>([]);
-  const [bhoonidhiStatus, setBhoonidhiStatus] = useState<string>("NOT_CONFIGURED");
   const [dataMode, setDataMode] = useState<string>("LIVE");
   const [fieldSummary, setFieldSummary] = useState<any>(null);
   const [mlStatus, setMlStatus] = useState<{
@@ -46,74 +43,27 @@ export default function CommandCenter() {
     is_trained: boolean;
   } | null>(null);
 
-
-  // Navigation tab state (Overview, Stations, Events)
-  const [activeNavTab, setActiveNavTab] = useState<string>("overview");
-
   // Selection state
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [latestAssessment, setLatestAssessment] = useState<RiskAssessmentItem | null>(null);
-  const [weatherHistory, setWeatherHistory] = useState<WeatherObservationItem[]>([]);
-  const [riskHistory, setRiskHistory] = useState<RiskAssessmentItem[]>([]);
-  const [timeline, setTimeline] = useState<EventTimelineMilestoneItem[]>([]);
-
-  // Modal & Engine state
-  const [investigateLocationId, setInvestigateLocationId] = useState<string | null>(null);
-  const [explainModalLocationId, setExplainModalLocationId] = useState<string | null>(null);
   const [engineOnline, setEngineOnline] = useState<boolean>(true);
   const [engineStatusText, setEngineStatusText] = useState<string>("ONLINE");
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [isRunningEngine, setIsRunningEngine] = useState<boolean>(false);
   const [isIngesting, setIsIngesting] = useState<boolean>(false);
-  const [isSimulating, setIsSimulating] = useState<boolean>(false);
-  const [isAcknowledging, setIsAcknowledging] = useState<boolean>(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(30);
-  const [broadcastTarget, setBroadcastTarget] = useState<{ eventId: string; locationId: string } | null>(null);
-  const [sitrepEventId, setSitrepEventId] = useState<string | null>(null);
-
-  // Fetch full location investigation & telemetry details
-  const loadLocationTelemetry = useCallback(
-    async (locId: string) => {
-      try {
-        const res = await fetch(`${API_URL}/api/v1/locations/${locId}/investigate`);
-        if (res.ok) {
-          const inv = await res.json();
-          setLatestAssessment(inv.latest_assessment);
-          setWeatherHistory(inv.weather_history || []);
-          setRiskHistory(inv.risk_history || []);
-          setTimeline(inv.event_timeline || []);
-        }
-      } catch (err) {
-        console.error("Failed to load telemetry for location", locId, err);
-      }
-    },
-    []
-  );
-
-  // Fetch event specific timeline if available
-  const loadEventTimeline = useCallback(
-    async (evId: string) => {
-      try {
-        const res = await fetch(`${API_URL}/api/v1/events/${evId}/timeline`);
-        if (res.ok) {
-          const tl = await res.json();
-          setTimeline(tl);
-        }
-      } catch (err) {
-        console.error("Failed to load timeline for event", evId, err);
-      }
-    },
-    []
-  );
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
 
   // Master refresh function
   const refreshDashboardData = useCallback(async () => {
     try {
-      // 1. Fetch Engine Status & Summary KPIs
-      const [sumRes, engRes] = await Promise.allSettled([
+      // 1. Fetch Summary & Engine Status in parallel
+      const [sumRes, engRes, mapRes, evRes, mlRes, fieldRes] = await Promise.allSettled([
         fetch(`${API_URL}/api/v1/dashboard/summary`),
         fetch(`${API_URL}/api/v1/engine/status`),
+        fetch(`${API_URL}/api/v1/locations/map`),
+        fetch(`${API_URL}/api/v1/events`),
+        fetch(`${API_URL}/api/v1/ml/status`),
+        fetch(`${API_URL}/api/v1/field/summary`),
       ]);
 
       if (engRes.status === "fulfilled" && engRes.value.ok) {
@@ -131,62 +81,37 @@ export default function CommandCenter() {
         setEngineStatusText("OFFLINE");
       }
 
-
-      // 2. Fetch Map Locations
-      const mapRes = await fetch(`${API_URL}/api/v1/locations/map`);
+      // Map locations
       let mapData: LocationMapItem[] = [];
-      if (mapRes.ok) {
-        mapData = await mapRes.json();
+      if (mapRes.status === "fulfilled" && mapRes.value.ok) {
+        mapData = await mapRes.value.json();
         setLocations(mapData);
       }
 
-      // 3. Fetch Events
-      const evRes = await fetch(`${API_URL}/api/v1/events`);
-      let evData: DisasterEventItem[] = [];
-      if (evRes.ok) {
-        evData = await evRes.json();
+      // Active events
+      if (evRes.status === "fulfilled" && evRes.value.ok) {
+        const evData: DisasterEventItem[] = await evRes.value.json();
         setEvents(evData);
       }
 
-      // 4. Fetch System Provider Health & Bhoonidhi Status
-      const sysRes = await fetch(`${API_URL}/api/v1/system/data-sources`);
-      if (sysRes.ok) {
-        const sysData = await sysRes.json();
-        setProviders(sysData.providers || []);
-        setDataMode(sysData.data_mode || "LIVE");
-      }
-
-      const eoRes = await fetch(`${API_URL}/api/v1/earth-observation/status`);
-      if (eoRes.ok) {
-        const eoData = await eoRes.json();
-        setBhoonidhiStatus(eoData.status || "NOT_CONFIGURED");
-      }
-
-      // 5. Fetch Field Operations Summary
-      const fieldRes = await fetch(`${API_URL}/api/v1/field/summary`);
-      if (fieldRes.ok) {
-        const fData = await fieldRes.json();
+      // Field summary
+      if (fieldRes.status === "fulfilled" && fieldRes.value.ok) {
+        const fData = await fieldRes.value.json();
         setFieldSummary(fData);
       }
 
-      // 6. Fetch ML Model Provenance & Status
-      try {
-        const mlRes = await fetch(`${API_URL}/api/v1/ml/status`);
-        if (mlRes.ok) {
-          const mlData = await mlRes.json();
-          setMlStatus({
-            model_status: mlData.model_status || "NOT_TRAINED",
-            active_prediction_tier: mlData.active_prediction_tier || "BASELINE_DETERMINISTIC",
-            active_model_version: mlData.active_model_version || "2.0.0",
-            is_trained: mlData.is_trained ?? false,
-          });
-        }
-      } catch (e) {
-        console.error("Failed to fetch ML status", e);
+      // ML status
+      if (mlRes.status === "fulfilled" && mlRes.value.ok) {
+        const mlData = await mlRes.value.json();
+        setMlStatus({
+          model_status: mlData.model_status || "NOT_TRAINED",
+          active_prediction_tier: mlData.active_prediction_tier || "BASELINE_DETERMINISTIC",
+          active_model_version: mlData.active_model_version || "2.1.0",
+          is_trained: mlData.is_trained ?? true,
+        });
       }
 
-
-      // Format sync time
+      // Sync fix timestamp
       const now = new Date();
       setLastUpdated(
         `${now.getUTCHours().toString().padStart(2, "0")}:${now.getUTCMinutes().toString().padStart(2, "0")}:${now
@@ -195,11 +120,9 @@ export default function CommandCenter() {
           .padStart(2, "0")} UTC`
       );
 
-      // Auto-select active or critical station if none selected
+      // Auto-select highest risk location if none selected
       setSelectedLocationId((prev) => {
-        if (prev && mapData.some((l) => l.id === prev)) {
-          return prev;
-        }
+        if (prev && mapData.some((l) => l.id === prev)) return prev;
         if (mapData.length > 0) {
           const highest = [...mapData].sort((a, b) => b.risk_score - a.risk_score)[0];
           return highest.id;
@@ -212,26 +135,18 @@ export default function CommandCenter() {
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
     refreshDashboardData();
   }, [refreshDashboardData]);
 
-  // Telemetry loader when selected location changes
-  useEffect(() => {
-    if (selectedLocationId) {
-      loadLocationTelemetry(selectedLocationId);
-    }
-  }, [selectedLocationId, loadLocationTelemetry]);
-
-  // Auto-refresh polling loop
+  // Auto-refresh loop
   useEffect(() => {
     if (autoRefreshInterval <= 0) return;
     const interval = setInterval(refreshDashboardData, autoRefreshInterval * 1000);
     return () => clearInterval(interval);
   }, [autoRefreshInterval, refreshDashboardData]);
 
-  // Toggle Live vs Simulation Data Mode
+  // Toggle Live vs Simulation Mode
   const handleToggleDataMode = async (mode: string) => {
     try {
       const res = await fetch(`${API_URL}/api/v1/ingestion/mode`, {
@@ -249,19 +164,12 @@ export default function CommandCenter() {
     }
   };
 
-  // Trigger Batch Ingest across all stations
+  // Trigger Ingest Batch
   const handleTriggerBatchIngest = async () => {
     setIsIngesting(true);
     try {
-      const res = await fetch(`${API_URL}/api/v1/ingestion/batch`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        await refreshDashboardData();
-        if (selectedLocationId) {
-          await loadLocationTelemetry(selectedLocationId);
-        }
-      }
+      const res = await fetch(`${API_URL}/api/v1/ingestion/batch`, { method: "POST" });
+      if (res.ok) await refreshDashboardData();
     } catch (err) {
       console.error("Batch ingestion error:", err);
     } finally {
@@ -269,7 +177,7 @@ export default function CommandCenter() {
     }
   };
 
-  // Trigger manual engine evaluation run
+  // Trigger Manual Engine Assessment
   const handleTriggerEngineRun = async () => {
     setIsRunningEngine(true);
     try {
@@ -278,12 +186,7 @@ export default function CommandCenter() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ force_fresh_fetch: true }),
       });
-      if (res.ok) {
-        await refreshDashboardData();
-        if (selectedLocationId) {
-          await loadLocationTelemetry(selectedLocationId);
-        }
-      }
+      if (res.ok) await refreshDashboardData();
     } catch (err) {
       console.error("Engine run error:", err);
     } finally {
@@ -291,86 +194,36 @@ export default function CommandCenter() {
     }
   };
 
-  // Run simulation scenario
-  const handleRunSimulation = async (scenario: string, locId: string) => {
-    setIsSimulating(true);
-    try {
-      const res = await fetch(`${API_URL}/api/v1/simulation/scenario`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          scenario,
-          location_id: locId,
-          seed: 42,
-        }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Simulation execution failed");
-      }
-      setSelectedLocationId(locId);
-      await refreshDashboardData();
-      await loadLocationTelemetry(locId);
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
-  // Handle Event Selection
-  const handleSelectEvent = (eventId: string, locId: string) => {
-    setSelectedEventId(eventId);
-    setSelectedLocationId(locId);
-    loadEventTimeline(eventId);
-    loadLocationTelemetry(locId);
-  };
-
-  // Handle Location Selection from map
-  const handleSelectLocation = (locId: string) => {
-    setSelectedLocationId(locId);
-    const relatedEvent = events.find((e) => e.location_id === locId && e.status !== "RESOLVED");
-    setSelectedEventId(relatedEvent ? relatedEvent.id : null);
-    loadLocationTelemetry(locId);
-    if (relatedEvent) {
-      loadEventTimeline(relatedEvent.id);
-    }
-  };
-
-  // Acknowledge Event
+  // Acknowledge event
   const handleAcknowledgeEvent = async (eventId: string) => {
-    setIsAcknowledging(true);
+    setAcknowledgingId(eventId);
     try {
-      const res = await fetch(`${API_URL}/api/v1/events/${eventId}/acknowledge`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        await refreshDashboardData();
-        if (selectedLocationId) {
-          await loadLocationTelemetry(selectedLocationId);
-        }
-      }
+      const res = await fetch(`${API_URL}/api/v1/events/${eventId}/acknowledge`, { method: "POST" });
+      if (res.ok) await refreshDashboardData();
     } catch (err) {
       console.error("Failed to acknowledge event:", err);
     } finally {
-      setIsAcknowledging(false);
+      setAcknowledgingId(null);
     }
   };
 
-  const activeSelectedLocation = locations.find((l) => l.id === selectedLocationId) || null;
-  const activeSelectedEvent =
-    events.find((e) => e.id === selectedEventId) ||
-    events.find((e) => e.location_id === selectedLocationId && e.status !== "RESOLVED") ||
-    null;
+  // Navigate to Station 360
+  const handleOpenStation360 = (locId: string) => {
+    router.push(`/stations?id=${locId}`);
+  };
+
+  const activeAlerts = events.filter((e) => e.status !== "RESOLVED");
+  const selectedLocation = locations.find((l) => l.id === selectedLocationId) || locations[0] || null;
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col font-sans">
-      {/* 1. Header with Mode Switcher & Top-Level Navigation */}
+      {/* 1. Standardized Command Header */}
       <CommandHeader
         engineOnline={engineOnline}
         engineStatusText={engineStatusText}
         lastUpdated={lastUpdated}
         dataSourcesStatus={summary?.data_sources_status || "OPEN-METEO LIVE / NER STATIONS"}
         dataMode={dataMode}
-
         onToggleDataMode={handleToggleDataMode}
         onTriggerEngineRun={handleTriggerEngineRun}
         onTriggerBatchIngest={handleTriggerBatchIngest}
@@ -378,225 +231,174 @@ export default function CommandCenter() {
         isIngesting={isIngesting}
         autoRefreshInterval={autoRefreshInterval}
         onToggleAutoRefresh={(sec) => setAutoRefreshInterval(sec)}
-        activeTab={activeNavTab}
-        onSelectTab={(tab) => setActiveNavTab(tab)}
-        bhoonidhiStatus={bhoonidhiStatus}
         fieldActiveCount={fieldSummary?.active_teams ?? 3}
         mlModelStatus={mlStatus?.model_status}
         mlModelVersion={mlStatus?.active_model_version}
         mlIsTrained={mlStatus?.is_trained ?? true}
-        onOpenBroadcast={() => {
-          if (activeSelectedEvent && selectedLocationId) {
-            setBroadcastTarget({ eventId: activeSelectedEvent.id, locationId: selectedLocationId });
-          } else if (locations.length > 0) {
-            setBroadcastTarget({ eventId: events[0]?.id || "EV-BROADCAST", locationId: locations[0].id });
-          }
-        }}
       />
 
-      {/* 2. Main Dashboard Content */}
+      {/* 2. Main Dashboard (Above-The-Fold Layout) */}
       <main className="flex-1 p-3.5 sm:p-5 max-w-[1700px] w-full mx-auto space-y-4">
-        {/* KPI Counter Row */}
+        {/* Top Status / KPI Counter Strip */}
         <KPICards
-          activeEventsCount={summary?.active_events_count ?? 0}
+          activeEventsCount={summary?.active_events_count ?? activeAlerts.length}
           criticalEventsCount={summary?.critical_events_count ?? 0}
           highRiskCount={summary?.high_risk_count ?? 0}
           moderateRiskCount={summary?.moderate_risk_count ?? 0}
-          totalLocations={summary?.total_monitored_locations ?? 0}
+          totalLocations={summary?.total_monitored_locations ?? locations.length}
           highestRiskScore={summary?.highest_risk_score ?? 0.0}
           highestRiskLevel={summary?.highest_risk_level ?? "LOW"}
         />
 
-        {/* Dynamic Nav View: OVERVIEW */}
-        {activeNavTab === "overview" && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            {/* Left Column (7 cols): Tactical Map + Forecast Progression + Station Intel + Event Detail */}
-            <div className="lg:col-span-7 space-y-4">
-              {/* GIS Landslide Prediction Heatmap */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs font-mono px-1">
-                  <span className="text-zinc-400 font-bold uppercase tracking-wider">
-                    GIS Landslide Prediction Heatmap (NER Corridor)
-                  </span>
-                  <span className="text-zinc-500 font-normal">Select station or toggle forecast layer</span>
-                </div>
-                <RiskMap
-                  locations={locations}
-                  selectedLocationId={selectedLocationId}
-                  onSelectLocation={handleSelectLocation}
-                  onOpenInvestigate={(id) => setInvestigateLocationId(id)}
-                />
+        {/* Primary Operational Area: GIS Map (Left) + Priority Locations (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          {/* Left Column (7 cols): NER GIS Landslide Map */}
+          <div className="lg:col-span-7 space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono px-1">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-zinc-300 font-bold uppercase tracking-wider">
+                  NER Landslide Decision Heatmap
+                </span>
               </div>
-
-              {/* Landslide Hazard Progression Timeline: Past -> Now -> Future */}
-              <ForecastProgressionTimeline
-                location={activeSelectedLocation || (locations.length > 0 ? locations[0] : null)}
-                onOpenInvestigate={(id) => setInvestigateLocationId(id)}
-              />
-
-
-              {/* Station Deep Telemetry & Synthesis Panel (when active) */}
-              {activeSelectedLocation && (
-                <StationIntelPanel
-                  locationId={activeSelectedLocation.id}
-                  locationName={activeSelectedLocation.name}
-                  district={activeSelectedLocation.district}
-                  state={activeSelectedLocation.state}
-                  elevation={activeSelectedLocation.elevation}
-                  slopeAngle={activeSelectedLocation.slope_angle}
-                  latestAssessment={latestAssessment}
-                  apiUrl={API_URL}
-                  onOpenInvestigate={(id) => setInvestigateLocationId(id)}
-                />
+              {selectedLocation && (
+                <button
+                  onClick={() => handleOpenStation360(selectedLocation.id)}
+                  className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold transition text-[11px]"
+                >
+                  <span>Investigate {selectedLocation.name}</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
               )}
-
-              {/* Event & Factor Deep Detail Panel */}
-              <EventDetailPanel
-                event={activeSelectedEvent}
-                location={activeSelectedLocation}
-                latestAssessment={latestAssessment}
-                weatherHistory={weatherHistory}
-                riskHistory={riskHistory}
-                timeline={timeline}
-                onAcknowledgeEvent={handleAcknowledgeEvent}
-                isAcknowledging={isAcknowledging}
-                onOpenInvestigate={(id) => setInvestigateLocationId(id)}
-                onExplainAssessment={() => selectedLocationId && setExplainModalLocationId(selectedLocationId)}
-                onOpenBroadcast={(evId, locId) => setBroadcastTarget({ eventId: evId, locationId: locId })}
-                onOpenSitRep={(evId) => setSitrepEventId(evId)}
-              />
-
-              {/* Field Operations & Ground Rescue Intelligence Panel */}
-              <FieldOperationsPanel
-                summary={fieldSummary}
-                apiUrl={API_URL}
-                onRefresh={refreshDashboardData}
-              />
             </div>
 
-            {/* Right Column (5 cols): Location Priority Table + Active Event Queue + Simulation Console */}
-            <div className="lg:col-span-5 space-y-4">
-              {/* Operational Priority Table */}
-              <LocationPriorityTable
+            {/* Interactive Leaflet Risk Map */}
+            <div className="relative">
+              <RiskMap
                 locations={locations}
                 selectedLocationId={selectedLocationId}
-                onSelectLocation={handleSelectLocation}
-                onOpenInvestigate={(id) => setInvestigateLocationId(id)}
+                onSelectLocation={(id) => setSelectedLocationId(id)}
+                onOpenInvestigate={handleOpenStation360}
               />
-
-              {/* Active Event Queue */}
-              <ActiveEventsList
-                events={events}
-                locations={locations}
-                selectedEventId={activeSelectedEvent?.id || null}
-                onSelectEvent={handleSelectEvent}
-              />
-
-              {/* Scenario Simulation Console */}
-              <SimulationPanel
-                locations={locations}
-                selectedLocationId={selectedLocationId}
-                onSelectLocation={(id) => {
-                  setSelectedLocationId(id);
-                  loadLocationTelemetry(id);
-                }}
-                onRunSimulation={handleRunSimulation}
-                isSimulating={isSimulating}
-              />
-
-              {/* Decision Support Compliance Notice */}
-              <div className="p-3 bg-zinc-950 border border-zinc-800 rounded text-[11px] text-zinc-400 leading-relaxed flex items-start gap-2.5 font-sans">
-                <Info className="w-4 h-4 text-zinc-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white font-mono">Prototype Decision Support:</strong> Platform operating in <span className="font-mono font-bold text-white">{dataMode}</span> mode. Hydro-meteorological thresholds and satellite metadata act as contextual decision support and do not replace official disaster management authorities.
-                </div>
-              </div>
             </div>
           </div>
-        )}
 
-        {/* Dynamic Nav View: STATIONS */}
-        {activeNavTab === "stations" && (
-          <div className="space-y-4">
+          {/* Right Column (5 cols): Top Priority Locations */}
+          <div className="lg:col-span-5 space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono px-1">
+              <span className="text-zinc-400 font-bold uppercase tracking-wider">
+                High-Risk Sectors &amp; Priority Queue
+              </span>
+              <Link
+                href="/stations"
+                className="text-zinc-400 hover:text-white flex items-center gap-1 transition text-[11px]"
+              >
+                <span>All Stations</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
             <LocationPriorityTable
               locations={locations}
               selectedLocationId={selectedLocationId}
-              onSelectLocation={handleSelectLocation}
-              onOpenInvestigate={(id) => setInvestigateLocationId(id)}
-            />
-
-            {activeSelectedLocation && (
-              <StationIntelPanel
-                locationId={activeSelectedLocation.id}
-                locationName={activeSelectedLocation.name}
-                district={activeSelectedLocation.district}
-                state={activeSelectedLocation.state}
-                elevation={activeSelectedLocation.elevation}
-                slopeAngle={activeSelectedLocation.slope_angle}
-                latestAssessment={latestAssessment}
-                apiUrl={API_URL}
-                onOpenInvestigate={(id) => setInvestigateLocationId(id)}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Dynamic Nav View: EVENTS */}
-
-        {activeNavTab === "events" && (
-          <div className="space-y-4">
-            <ActiveEventsList
-              events={events}
-              locations={locations}
-              selectedEventId={activeSelectedEvent?.id || null}
-              onSelectEvent={(evId, locId) => {
-                handleSelectEvent(evId, locId);
-                setActiveNavTab("overview");
-              }}
+              onSelectLocation={(id) => setSelectedLocationId(id)}
+              onOpenInvestigate={handleOpenStation360}
             />
           </div>
-        )}
+        </div>
+
+        {/* 3. Below Map: Critical Alerts & Active Warning Strip */}
+        <div className="bg-zinc-950 border border-zinc-800 rounded p-3.5 space-y-2.5 font-mono text-xs">
+          <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className={`w-4 h-4 ${activeAlerts.length > 0 ? "text-amber-400" : "text-emerald-400"}`} />
+              <span className="text-zinc-200 font-bold uppercase tracking-wider">
+                Active Regional Alerts ({activeAlerts.length})
+              </span>
+            </div>
+            <Link
+              href="/events"
+              className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 font-bold transition"
+            >
+              <span>Manage Events Queue</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {activeAlerts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+              {activeAlerts.slice(0, 3).map((ev) => {
+                const isCrit = ev.severity === "CRITICAL";
+                return (
+                  <div
+                    key={ev.id}
+                    className={`p-3 rounded border flex flex-col justify-between space-y-2 ${
+                      isCrit ? "bg-red-950/30 border-red-800/60" : "bg-black border-zinc-800"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span
+                            className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase border ${
+                              isCrit
+                                ? "bg-red-950 text-red-300 border-red-700"
+                                : "bg-amber-950 text-amber-300 border-amber-700"
+                            }`}
+                          >
+                            {ev.severity}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-bold">{ev.location_id}</span>
+                        </div>
+                        <h4 className="font-bold text-white text-xs leading-snug">{ev.summary || ev.event_type?.replace(/_/g, " ")}</h4>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-850">
+                      <span>Score: <strong className="text-white">{ev.risk_score.toFixed(1)}</strong></span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleAcknowledgeEvent(ev.id)}
+                          disabled={acknowledgingId === ev.id}
+                          className="text-zinc-300 hover:text-white underline cursor-pointer disabled:opacity-50"
+                        >
+                          {acknowledgingId === ev.id ? "Saving..." : "Acknowledge"}
+                        </button>
+                        <button
+                          onClick={() => handleOpenStation360(ev.location_id)}
+                          className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-0.5"
+                        >
+                          <span>Inspect</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-4 bg-black rounded border border-zinc-850 flex items-center justify-between text-zinc-400">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span className="text-zinc-300">All NER sectors operating within safe baseline thresholds. No active alerts requiring immediate intervention.</span>
+              </div>
+              <Link href="/events" className="text-emerald-400 hover:underline font-bold text-[11px]">
+                View Historical Log
+              </Link>
+            </div>
+          )}
+        </div>
       </main>
 
-      {/* 3. Deep Investigation Modal (Station 360) */}
-      <LocationInvestigateModal
-        locationId={investigateLocationId}
-        apiUrl={API_URL}
-        onClose={() => setInvestigateLocationId(null)}
-      />
-
-      {/* 4. Assessment Explanation Modal */}
-      {explainModalLocationId && (
-        <AssessmentExplanationModal
-          locationId={explainModalLocationId}
-          locationName={locations.find((l) => l.id === explainModalLocationId)?.name || undefined}
-          apiUrl={API_URL}
-          onClose={() => setExplainModalLocationId(null)}
-        />
-      )}
-
-      {/* 5. Multi-Channel Emergency Broadcast Modal */}
-      {broadcastTarget && (
-        <BroadcastModal
-          eventId={broadcastTarget.eventId}
-          locationId={broadcastTarget.locationId}
-          apiUrl={API_URL}
-          onClose={() => setBroadcastTarget(null)}
-        />
-      )}
-
-      {/* 6. Formal NDMA Situation Report Modal */}
-      {sitrepEventId && (
-        <SitRepModal
-          eventId={sitrepEventId}
-          apiUrl={API_URL}
-          onClose={() => setSitrepEventId(null)}
-        />
-      )}
-
-      {/* 7. Understated Footer */}
-      <footer className="border-t border-zinc-900 px-5 py-2 text-center text-[10px] text-zinc-600 font-mono">
-        DISASTRA | Central Disaster Intelligence Command Center &amp; Field Rescue Network
+      {/* Understated Footer */}
+      <footer className="border-t border-zinc-900 px-5 py-2.5 text-center text-[10px] text-zinc-500 font-mono flex items-center justify-between max-w-[1700px] w-full mx-auto">
+        <span>DISASTRA &bull; Disaster Intelligence Command Center &bull; NER India</span>
+        <div className="flex items-center gap-4 text-zinc-400">
+          <Link href="/system" className="hover:text-white transition">System Health</Link>
+          <Link href="/broadcast" className="hover:text-white transition">Broadcast Console</Link>
+          <Link href="/field" className="hover:text-white transition">Field Operations</Link>
+        </div>
       </footer>
     </div>
   );

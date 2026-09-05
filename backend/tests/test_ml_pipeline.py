@@ -157,12 +157,7 @@ def test_task_b_landslide_prediction_horizons():
 def test_model_registry_status():
     status = model_registry.get_registry_status()
     assert status["registry_version"] == "1.0.0"
-    assert status["active_model_tier"] in [
-        ModelTier.BASELINE_DETERMINISTIC.value,
-        ModelTier.TABULAR_ML_LOGISTIC.value,
-        ModelTier.TABULAR_ML_RANDOM_FOREST.value,
-        ModelTier.TABULAR_ML_GRADIENT_BOOST.value,
-    ]
+    assert status["active_model_tier"] in [m.value for m in ModelTier]
     assert status["feature_count"] >= 15
 
     assert len(status["registered_models"]) >= 1
@@ -219,12 +214,7 @@ async def test_ml_api_endpoints(client, db_session):
     status_resp = await client.get("/api/v1/ml/status")
     assert status_resp.status_code == 200
     status_data = status_resp.json()
-    assert status_data["active_model_tier"] in [
-        "BASELINE_DETERMINISTIC",
-        "TABULAR_ML_LOGISTIC",
-        "TABULAR_ML_RANDOM_FOREST",
-        "TABULAR_ML_GRADIENT_BOOST",
-    ]
+    assert status_data["active_model_tier"] in [m.value for m in ModelTier]
     assert status_data["feature_count"] >= 15
 
 

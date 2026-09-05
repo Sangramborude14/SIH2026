@@ -107,8 +107,12 @@ class LandslideModelRegistry:
                     negative_samples_count=meta.get("negative_samples_count", 0),
                     feature_names=meta.get("feature_names", self.FEATURE_NAMES),
                     validation_roc_auc=meta.get("test_roc_auc"),
+                    validation_pr_auc=meta.get("test_pr_auc"),
                     validation_f1_score=meta.get("test_f1_score"),
                     validation_brier_score=meta.get("test_brier_score"),
+                    feature_schema_version=meta.get("feature_schema_version", "2.0.0"),
+                    candidate_comparison=meta.get("candidate_comparison"),
+                    shap_global_importances=meta.get("shap_global_importances"),
                     status_note="Trained and calibrated machine learning model loaded and operational.",
                 )
 
@@ -158,10 +162,14 @@ class LandslideModelRegistry:
     def get_registry_status(self) -> Dict[str, Any]:
         active_id = "baseline-deterministic"
         active_tier = ModelTier.BASELINE_DETERMINISTIC.value
+        active_version = "1.0.0"
+        schema_version = "1.0.0"
         for m_id, m in self._registered_models.items():
             if m.is_active:
                 active_id = m_id
                 active_tier = m.model_tier.value
+                active_version = m.version
+                schema_version = m.feature_schema_version or "2.0.0"
                 break
 
         return {
@@ -175,7 +183,8 @@ class LandslideModelRegistry:
             "registered_models": [m.model_dump() for m in self._registered_models.values()],
             "operational_status": "READY" if self._is_trained_model_active else "NOT_TRAINED",
             "model_status": "READY" if self._is_trained_model_active else "NOT_TRAINED",
-            "active_model_version": "2.0.0",
+            "active_model_version": active_version,
+            "feature_schema_version": schema_version,
             "training_pipeline_status": "MODEL_LOADED" if self._is_trained_model_active else "AWAITING_LABELLED_NER_DATASET",
         }
 

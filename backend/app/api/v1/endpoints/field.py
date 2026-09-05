@@ -2,7 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.api.deps import get_db
+from backend.app.api.deps import get_db, require_role
+from backend.app.models.user import User
 from backend.app.services.field_service import field_service, FieldOperationsService
 from backend.app.schemas.field import (
     FieldTeamResponse,
@@ -64,6 +65,7 @@ async def get_field_assignment_by_id(
 async def update_assignment_status(
     team_id: str,
     status_in: TeamStatusUpdateRequest,
+    current_user: User = Depends(require_role(["FIELD_RESPONDER", "ADMIN"])),
     db: AsyncSession = Depends(get_db)
 ):
     """Updates unit deployment lifecycle status and GPS coordinates."""
@@ -114,6 +116,7 @@ async def list_field_teams(db: AsyncSession = Depends(get_db)):
 async def update_team_status(
     team_id: str,
     status_in: TeamStatusUpdateRequest,
+    current_user: User = Depends(require_role(["FIELD_RESPONDER", "ADMIN"])),
     db: AsyncSession = Depends(get_db)
 ):
     """Updates unit deployment lifecycle status and GPS coordinates."""
@@ -145,7 +148,8 @@ from backend.app.services.storage_provider import get_storage_provider
 @router.post("/upload-image")
 async def upload_field_report_image(
     file: UploadFile = File(...),
-    uploaded_by: Optional[str] = Query(None, description="Reporter name or callsign")
+    uploaded_by: Optional[str] = Query(None, description="Reporter name or callsign"),
+    current_user: User = Depends(require_role(["FIELD_RESPONDER", "EXPERT", "ADMIN"]))
 ):
     """
     Securely uploads a field report evidence image (JPEG, PNG, WEBP).
@@ -157,7 +161,7 @@ async def upload_field_report_image(
         file_bytes=content,
         original_filename=file.filename or "report.jpg",
         content_type=file.content_type or "image/jpeg",
-        uploaded_by=uploaded_by,
+        uploaded_by=uploaded_by or current_user.email,
     )
     return res
 
@@ -186,6 +190,7 @@ async def list_field_reports(
 @router.post("/reports", response_model=FieldReportResponse, status_code=status.HTTP_201_CREATED)
 async def submit_field_report(
     report_in: FieldReportCreate,
+    current_user: User = Depends(require_role(["FIELD_RESPONDER", "ADMIN"])),
     db: AsyncSession = Depends(get_db)
 ):
     """Submits a structured ground observation report from a field operator."""
@@ -198,6 +203,7 @@ async def submit_field_report(
 async def update_report_status(
     report_id: str,
     update_in: FieldReportUpdate,
+    current_user: User = Depends(require_role(["EXPERT", "ADMIN"])),
     db: AsyncSession = Depends(get_db)
 ):
     """Command Center officer acknowledges, reviews, or incorporates a field observation."""

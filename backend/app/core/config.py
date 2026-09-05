@@ -113,6 +113,27 @@ class Settings(BaseSettings):
     RESEND_PROVIDER_MODE: str = "MOCK"  # "LIVE" or "MOCK"
     APP_BASE_URL: str = "http://localhost:3000"
 
+    # --- Authentication & JWT Security ---
+    JWT_SECRET_KEY: str = "disastra-super-secret-production-hardened-jwt-key-sih26001-ner-987456"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    REFRESH_COOKIE_NAME: str = "disastra_refresh_token"
+    REFRESH_COOKIE_SECURE: bool = False  # Set to True in HTTPS production
+    REFRESH_COOKIE_SAMESITE: str = "lax"
+    ADMIN_BOOTSTRAP_TOKEN: Optional[str] = "disastra-admin-bootstrap-sih2026-ner"
+
+    # --- SSRF Protection & Allowed External Hosts ---
+    ALLOWED_EXTERNAL_HOSTS: List[str] = [
+        "api.open-meteo.com",
+        "archive-api.open-meteo.com",
+        "bhoonidhi.nrsc.gov.in",
+        "fcm.googleapis.com",
+        "api.resend.com",
+    ]
+
+    # --- Rate Limiting Configuration ---
+    RATE_LIMIT_ENABLED: bool = True
 
     # CORS origins
     BACKEND_CORS_ORIGINS: List[str] = [

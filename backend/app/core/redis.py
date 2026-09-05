@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import httpx
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
-from backend.app.providers.health import provider_health_registry
 
 
 class InMemoryTTLCache:
@@ -159,6 +158,7 @@ class RedisService:
     def __init__(self):
         self._memory_cache = InMemoryTTLCache()
         self._upstash_client: Optional[UpstashRedisClient] = None
+        self._async_redis = None
         self._init_client()
 
     def _init_client(self):
@@ -169,6 +169,17 @@ class RedisService:
                 timeout=settings.REDIS_TIMEOUT_SECONDS
             )
             logger.info("RedisService configured with Upstash Redis REST backend.")
+        elif settings.REDIS_URL and settings.REDIS_CACHE_ENABLED:
+            try:
+                import redis.asyncio as aioredis
+                self._async_redis = aioredis.from_url(
+                    settings.REDIS_URL,
+                    socket_connect_timeout=settings.REDIS_TIMEOUT_SECONDS,
+                    decode_responses=True
+                )
+                logger.info(f"RedisService configured with async Redis backend ({settings.REDIS_URL}).")
+            except Exception as err:
+                logger.warning(f"Async Redis initialization deferred ({err}); operating with local in-memory TTL cache.")
         else:
             self._upstash_client = None
             logger.info("RedisService initialized with local in-memory TTL cache.")
@@ -180,7 +191,7 @@ class RedisService:
     async def get(self, key: str) -> Optional[Any]:
         """
         Retrieves a cached item by key.
-        Checks Upstash Redis if configured; falls back to in-memory cache gracefully on failure.
+        Checks Upstash or native Redis if configured; falls back to in-memory cache gracefully on failure.
         """
         start_t = time.perf_counter()
         if self._upstash_client:
@@ -196,6 +207,18 @@ class RedisService:
             except Exception as err:
                 logger.warning(f"Upstash Redis read failed for key '{key}' ({err}). Falling back to in-memory tier.")
                 provider_health_registry.record_failure("cache-subsystem", f"Read error: {err}")
+        elif self._async_redis:
+            try:
+                raw_val = await self._async_redis.get(key)
+                if raw_val is not None:
+                    latency_ms = round((time.perf_counter() - start_t) * 1000, 2)
+                    provider_health_registry.record_success("cache-subsystem", latency_ms)
+                    try:
+                        return json.loads(raw_val)
+                    except (json.JSONDecodeError, TypeError):
+                        return raw_val
+            except Exception as err:
+                logger.debug(f"Redis read failed for key '{key}' ({err}). Falling back to in-memory tier.")
 
         # Local memory fallback
         return await self._memory_cache.get(key)
@@ -203,7 +226,7 @@ class RedisService:
     async def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None) -> bool:
         """
         Caches a serializable item with an explicit or default TTL.
-        Writes to Upstash Redis and in-memory cache concurrently.
+        Writes to Redis/Upstash and in-memory cache concurrently.
         """
         ttl = ttl_seconds or settings.WEATHER_CACHE_TTL_SECONDS
         start_t = time.perf_counter()
@@ -228,6 +251,15 @@ class RedisService:
                 logger.warning(f"Upstash Redis write failed for key '{key}' ({err}). Local in-memory cache preserved.")
                 provider_health_registry.record_failure("cache-subsystem", f"Write error: {err}")
                 return True
+        elif self._async_redis:
+            try:
+                await self._async_redis.set(key, serialized, ex=ttl)
+                latency_ms = round((time.perf_counter() - start_t) * 1000, 2)
+                provider_health_registry.record_success("cache-subsystem", latency_ms)
+                return True
+            except Exception as err:
+                logger.debug(f"Redis write failed for key '{key}' ({err}). Local in-memory cache preserved.")
+                return True
 
         return True
 
@@ -243,6 +275,12 @@ class RedisService:
                 return await self._upstash_client.delete(key)
             except Exception as err:
                 logger.warning(f"Upstash Redis delete failed for key '{key}' ({err}).")
+        elif self._async_redis:
+            try:
+                await self._async_redis.delete(key)
+                return True
+            except Exception as err:
+                logger.debug(f"Redis delete failed for key '{key}' ({err}).")
         return True
 
     async def exists(self, key: str) -> bool:
@@ -254,6 +292,11 @@ class RedisService:
                 return await self._upstash_client.exists(key)
             except Exception as err:
                 logger.warning(f"Upstash Redis exists check failed for key '{key}' ({err}).")
+        elif self._async_redis:
+            try:
+                return bool(await self._async_redis.exists(key))
+            except Exception as err:
+                logger.debug(f"Redis exists check failed for key '{key}' ({err}).")
         return False
 
     async def increment(self, key: str, amount: int = 1, ttl_seconds: Optional[int] = 60) -> int:

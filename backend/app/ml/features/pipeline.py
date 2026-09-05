@@ -155,3 +155,5 @@ class LandslideFeaturePipeline:
 
 
 shared_feature_pipeline = LandslideFeaturePipeline()
+FEATURE_NAMES = LandslideFeaturePipeline.FEATURE_NAMES
+SCHEMA_VERSION = LandslideFeaturePipeline.SCHEMA_VERSION

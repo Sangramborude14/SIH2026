@@ -113,7 +113,7 @@ async def test_forecast_database_persistence(db_session: AsyncSession, mock_ner_
         rec = next(r for r in records if r.forecast_horizon == "24H")
         assert rec.probability is not None
         assert 0.0 <= rec.probability <= 1.0
-        assert rec.model_version == "2.0.0"
+        assert rec.model_version.startswith("2.") or rec.model_version.startswith("v2.")
         assert rec.data_freshness == "FRESH"
         assert rec.primary_features_compact is not None
         assert "slope_angle" in rec.primary_features_compact

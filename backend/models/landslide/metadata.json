@@ -1,211 +1,621 @@
 {
-  "model_id": "tabular-tabular_ml_gradient_boost-ner",
-  "model_name": "HistGradientBoosting Classifier",
-  "model_tier": "TABULAR_ML_GRADIENT_BOOST",
-  "model_version": "v2.0.0",
+  "model_id": "tabular-tabular_ml_xgboost_constrained-ner",
+  "model_name": "XGBoost Classifier (Research-Constrained)",
+  "model_tier": "TABULAR_ML_XGBOOST_CONSTRAINED",
+  "model_version": "v2.1.0-research",
   "forecast_horizon": "24H",
   "forecast_horizon_hours": 24,
   "training_source": "SYNTHETIC",
   "validation_level": "SIMULATION_ONLY",
-  "trained_at": "2026-09-03T17:22:01.890233+00:00",
+  "trained_at": "2026-09-05T11:40:52.564619+00:00",
   "training_samples_count": 10496,
   "validation_samples_count": 2248,
   "test_samples_count": 2256,
-  "positive_events_count": 6858,
-  "negative_samples_count": 8142,
-  "test_roc_auc": 0.9916,
-  "test_pr_auc": 0.9903,
-  "test_f1_score": 0.9415,
-  "test_precision": 0.9186,
-  "test_recall": 0.9654,
-  "test_brier_score": 0.0371,
+  "positive_events_count": 6811,
+  "negative_samples_count": 8189,
+  "test_roc_auc": 0.9947,
+  "test_pr_auc": 0.9932,
+  "test_f1_score": 0.9571,
+  "test_precision": 0.9658,
+  "test_recall": 0.9486,
+  "test_brier_score": 0.0284,
   "decision_threshold": 0.5,
   "random_seed": 42,
-  "feature_schema_version": "2.0.0",
+  "feature_schema_version": "2.0.0-research",
   "feature_names": [
+    "current_rainfall_24h",
+    "current_rainfall_p99_ratio",
+    "current_rainfall_p95_ratio",
+    "forecast_precipitation_24h",
+    "forecast_rainfall_p99_ratio",
+    "antecedent_rainfall_48h",
+    "rainfall_72h",
+    "antecedent_precipitation_index",
+    "consecutive_wet_hours",
+    "soil_moisture_surface",
+    "soil_moisture_middle",
+    "soil_moisture_deep",
+    "soil_moisture_delta_6h",
+    "soil_moisture_delta_24h",
+    "soil_moisture_delta_48h",
+    "wetness_percentile",
+    "dry_to_wet_transition",
+    "rainfall_x_soil_wetness",
     "slope_angle",
     "elevation",
     "aspect_sin",
     "aspect_cos",
-    "baseline_susceptibility",
-    "rainfall_1h",
-    "rainfall_3h",
-    "rainfall_6h",
-    "rainfall_12h",
-    "rainfall_24h",
-    "rainfall_48h",
-    "rainfall_72h",
-    "rainfall_7d",
-    "consecutive_wet_hours",
-    "antecedent_precipitation_index",
-    "rainfall_z_score_24h",
-    "id_curve_ratio",
-    "soil_moisture_surface",
-    "soil_moisture_middle",
-    "soil_moisture_deep",
-    "soil_moisture_change_6h",
-    "soil_moisture_change_24h",
-    "month_sin",
-    "month_cos",
-    "is_monsoon_season"
+    "susceptibility_prior",
+    "is_monsoon_season",
+    "lithology_strength",
+    "distance_to_active_fault",
+    "lineament_density",
+    "distance_to_road",
+    "ndvi"
   ],
   "feature_importances": [
     {
       "feature": "slope_angle",
-      "importance_score": 0.8228,
-      "method": "permutation_importance"
+      "importance_score": 0.3488,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "rainfall_x_soil_wetness",
+      "importance_score": 0.284,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "current_rainfall_p99_ratio",
+      "importance_score": 0.1226,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "antecedent_rainfall_48h",
+      "importance_score": 0.1118,
+      "method": "mean_decrease_impurity"
     },
     {
       "feature": "rainfall_72h",
-      "importance_score": 0.1292,
-      "method": "permutation_importance"
+      "importance_score": 0.0536,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "susceptibility_prior",
+      "importance_score": 0.0389,
+      "method": "mean_decrease_impurity"
     },
     {
       "feature": "soil_moisture_surface",
-      "importance_score": 0.0095,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "consecutive_wet_hours",
-      "importance_score": 0.0091,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "antecedent_precipitation_index",
-      "importance_score": 0.0091,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "rainfall_24h",
-      "importance_score": 0.0072,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "rainfall_6h",
-      "importance_score": 0.0057,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "id_curve_ratio",
-      "importance_score": 0.0045,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "rainfall_z_score_24h",
-      "importance_score": 0.0021,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "rainfall_1h",
-      "importance_score": 0.0009,
-      "method": "permutation_importance"
+      "importance_score": 0.0365,
+      "method": "mean_decrease_impurity"
     },
     {
       "feature": "elevation",
-      "importance_score": 0.0,
-      "method": "permutation_importance"
+      "importance_score": 0.0031,
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "aspect_sin",
-      "importance_score": 0.0,
-      "method": "permutation_importance"
+      "feature": "current_rainfall_24h",
+      "importance_score": 0.0006,
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "aspect_cos",
-      "importance_score": 0.0,
-      "method": "permutation_importance"
+      "feature": "forecast_precipitation_24h",
+      "importance_score": 0.0001,
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "baseline_susceptibility",
+      "feature": "current_rainfall_p95_ratio",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "rainfall_3h",
+      "feature": "forecast_rainfall_p99_ratio",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "rainfall_12h",
+      "feature": "antecedent_precipitation_index",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "rainfall_48h",
+      "feature": "consecutive_wet_hours",
       "importance_score": 0.0,
-      "method": "permutation_importance"
-    },
-    {
-      "feature": "rainfall_7d",
-      "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
       "feature": "soil_moisture_middle",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
       "feature": "soil_moisture_deep",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "soil_moisture_change_6h",
+      "feature": "soil_moisture_delta_6h",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "soil_moisture_change_24h",
+      "feature": "soil_moisture_delta_24h",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "month_sin",
+      "feature": "soil_moisture_delta_48h",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
     },
     {
-      "feature": "month_cos",
+      "feature": "wetness_percentile",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "dry_to_wet_transition",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "aspect_sin",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "aspect_cos",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
     },
     {
       "feature": "is_monsoon_season",
       "importance_score": 0.0,
-      "method": "permutation_importance"
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "lithology_strength",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "distance_to_active_fault",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "lineament_density",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "distance_to_road",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    },
+    {
+      "feature": "ndvi",
+      "importance_score": 0.0,
+      "method": "mean_decrease_impurity"
+    }
+  ],
+  "shap_global_importances": [
+    {
+      "feature": "slope_angle",
+      "importance_score": 0.5663,
+      "mean_abs_shap": 2.4051,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "current_rainfall_p99_ratio",
+      "importance_score": 0.1143,
+      "mean_abs_shap": 0.4856,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "susceptibility_prior",
+      "importance_score": 0.0878,
+      "mean_abs_shap": 0.373,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "soil_moisture_surface",
+      "importance_score": 0.0846,
+      "mean_abs_shap": 0.3593,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "rainfall_x_soil_wetness",
+      "importance_score": 0.056,
+      "mean_abs_shap": 0.2377,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "rainfall_72h",
+      "importance_score": 0.0472,
+      "mean_abs_shap": 0.2005,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "antecedent_rainfall_48h",
+      "importance_score": 0.0394,
+      "mean_abs_shap": 0.1675,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "current_rainfall_24h",
+      "importance_score": 0.0023,
+      "mean_abs_shap": 0.0098,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "elevation",
+      "importance_score": 0.0017,
+      "mean_abs_shap": 0.0073,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "forecast_precipitation_24h",
+      "importance_score": 0.0004,
+      "mean_abs_shap": 0.0016,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "current_rainfall_p95_ratio",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "forecast_rainfall_p99_ratio",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "antecedent_precipitation_index",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "consecutive_wet_hours",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "soil_moisture_middle",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "soil_moisture_deep",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "soil_moisture_delta_6h",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "soil_moisture_delta_24h",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "soil_moisture_delta_48h",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "wetness_percentile",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "dry_to_wet_transition",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "aspect_sin",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "aspect_cos",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "is_monsoon_season",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "lithology_strength",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "distance_to_active_fault",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "lineament_density",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "distance_to_road",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
+    },
+    {
+      "feature": "ndvi",
+      "importance_score": 0.0,
+      "mean_abs_shap": 0.0,
+      "method": "TreeSHAP_exact"
     }
   ],
   "candidate_comparison": [
     {
       "name": "Logistic Regression Baseline",
       "tier": "TABULAR_ML_LOGISTIC",
-      "pr_auc": 0.987,
-      "roc_auc": 0.9892,
-      "f1_score": 0.9349,
-      "recall": 0.9478,
-      "precision": 0.9223,
-      "brier_score": 0.0397
+      "pr_auc": 0.9885,
+      "roc_auc": 0.9907,
+      "f1_score": 0.9473,
+      "recall": 0.9615,
+      "precision": 0.9336,
+      "brier_score": 0.0349
     },
     {
       "name": "Random Forest Classifier",
       "tier": "TABULAR_ML_RANDOM_FOREST",
-      "pr_auc": 0.988,
-      "roc_auc": 0.9904,
-      "f1_score": 0.9382,
-      "recall": 0.9429,
-      "precision": 0.9337,
-      "brier_score": 0.0359
+      "pr_auc": 0.9905,
+      "roc_auc": 0.992,
+      "f1_score": 0.9465,
+      "recall": 0.9461,
+      "precision": 0.947,
+      "brier_score": 0.0335
     },
     {
       "name": "HistGradientBoosting Classifier",
       "tier": "TABULAR_ML_GRADIENT_BOOST",
-      "pr_auc": 0.9886,
-      "roc_auc": 0.9908,
-      "f1_score": 0.9412,
-      "recall": 0.9547,
-      "precision": 0.9282,
-      "brier_score": 0.0366
+      "pr_auc": 0.9897,
+      "roc_auc": 0.9914,
+      "f1_score": 0.9444,
+      "recall": 0.9489,
+      "precision": 0.9399,
+      "brier_score": 0.0343
+    },
+    {
+      "name": "XGBoost Classifier (Standard Regularized)",
+      "tier": "TABULAR_ML_XGBOOST",
+      "pr_auc": 0.9902,
+      "roc_auc": 0.9918,
+      "f1_score": 0.9435,
+      "recall": 0.9403,
+      "precision": 0.9467,
+      "brier_score": 0.0347
+    },
+    {
+      "name": "XGBoost Classifier (Research-Constrained)",
+      "tier": "TABULAR_ML_XGBOOST_CONSTRAINED",
+      "pr_auc": 0.9907,
+      "roc_auc": 0.9922,
+      "f1_score": 0.9479,
+      "recall": 0.947,
+      "precision": 0.9488,
+      "brier_score": 0.0359
     }
-  ]
+  ],
+  "sanity_checks": {
+    "overall_sanity_passed": true,
+    "tests_run": 5,
+    "checks": {
+      "rainfall_monotonicity": {
+        "passed": true,
+        "curve": [
+          {
+            "value": 0.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 20.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 50.0,
+            "probability": 0.1227
+          },
+          {
+            "value": 90.0,
+            "probability": 0.2601
+          },
+          {
+            "value": 140.0,
+            "probability": 0.2661
+          },
+          {
+            "value": 200.0,
+            "probability": 0.2661
+          }
+        ],
+        "description": "Probability must generally increase or stay constant with higher current rainfall."
+      },
+      "forecast_monotonicity": {
+        "passed": true,
+        "curve": [
+          {
+            "value": 0.0,
+            "probability": 0.085
+          },
+          {
+            "value": 15.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 45.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 80.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 130.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 180.0,
+            "probability": 0.1131
+          }
+        ],
+        "description": "Incoming forecast rainfall cannot dramatically decrease upcoming 24h probability."
+      },
+      "low_slope_invariant": {
+        "passed": true,
+        "probability": 0.066,
+        "threshold_limit": 0.5,
+        "description": "Low slopes (<15\u00b0) under extreme rain represent flood risk, NOT landslide risk."
+      },
+      "dry_steep_slope_invariant": {
+        "passed": true,
+        "probability": 0.174,
+        "threshold_limit": 0.4,
+        "description": "Steep slopes without rainfall trigger or soil saturation must not trigger false alarms."
+      },
+      "soil_moisture_monotonicity": {
+        "passed": true,
+        "curve": [
+          {
+            "value": 20.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 35.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 50.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 70.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 85.0,
+            "probability": 0.1131
+          },
+          {
+            "value": 95.0,
+            "probability": 0.1131
+          }
+        ],
+        "description": "Higher soil moisture saturation increases pore pressure and slope instability."
+      }
+    }
+  },
+  "monotonic_assumptions": {
+    "current_rainfall_24h": {
+      "constraint": 1,
+      "rationale": "Increasing triggering rainfall increases pore-water pressure and driving weight; cannot directly decrease slope failure probability."
+    },
+    "current_rainfall_p99_ratio": {
+      "constraint": 1,
+      "rationale": "Increasing localized extreme rainfall anomaly increases probability of exceeding physical geotechnical thresholds."
+    },
+    "current_rainfall_p95_ratio": {
+      "constraint": 1,
+      "rationale": "Higher normalized antecedent-to-peak rainfall burst increases failure hazard."
+    },
+    "forecast_precipitation_24h": {
+      "constraint": 1,
+      "rationale": "Incoming forecasted storm deluge adds prospective driving infiltration; cannot decrease upcoming 24h probability."
+    },
+    "forecast_rainfall_p99_ratio": {
+      "constraint": 1,
+      "rationale": "Normalized prospective storm intensity increases upcoming risk monotonically."
+    },
+    "antecedent_rainfall_48h": {
+      "constraint": 1,
+      "rationale": "Prior wetting saturates regolith pore space and reduces matric suction."
+    },
+    "rainfall_72h": {
+      "constraint": 1,
+      "rationale": "Cumulative 3-day rainfall promotes deep seepage and water table elevation."
+    },
+    "antecedent_precipitation_index": {
+      "constraint": 1,
+      "rationale": "Higher API represents greater residual subsurface moisture storage."
+    },
+    "consecutive_wet_hours": {
+      "constraint": 1,
+      "rationale": "Prolonged rainfall duration promotes continuous infiltration without drainage recovery."
+    },
+    "soil_moisture_surface": {
+      "constraint": 1,
+      "rationale": "Near-surface saturation induces positive pore water pressure and reduces shear strength."
+    },
+    "wetness_percentile": {
+      "constraint": 1,
+      "rationale": "Higher saturation ratio relative to field capacity decreases effective normal stress."
+    },
+    "dry_to_wet_transition": {
+      "constraint": 1,
+      "rationale": "Rapid wetting front advancement destabilizes dry cohesive bonds."
+    },
+    "rainfall_x_soil_wetness": {
+      "constraint": 1,
+      "rationale": "Coupled rainfall trigger and soil preconditioning compounds destabilization."
+    },
+    "slope_angle": {
+      "constraint": 1,
+      "rationale": "Steeper slope increases tangential gravitational driving shear stress along prospective failure planes."
+    },
+    "susceptibility_prior": {
+      "constraint": 1,
+      "rationale": "Higher intrinsic geological susceptibility cannot decrease operational failure probability."
+    },
+    "lineament_density": {
+      "constraint": 1,
+      "rationale": "Higher structural fracture density facilitates infiltration and creates shear weakness planes."
+    },
+    "lithology_strength": {
+      "constraint": -1,
+      "rationale": "Higher intact rock strength resists shear failure and reduces failure probability."
+    },
+    "distance_to_active_fault": {
+      "constraint": -1,
+      "rationale": "Greater distance from active seismotectonic faults reduces seismic fracture damage."
+    },
+    "distance_to_road": {
+      "constraint": -1,
+      "rationale": "Greater distance from road cuts reduces destabilizing toe excavation."
+    },
+    "ndvi": {
+      "constraint": -1,
+      "rationale": "Higher vegetation and root reinforcement enhances slope cohesion and evapotranspiration."
+    }
+  }
 }

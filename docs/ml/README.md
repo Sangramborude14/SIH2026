@@ -31,6 +31,7 @@ The unified CLI tool `backend/app/ml/cli.py` controls all ML operations across W
 | :--- | :--- | :--- |
 | `bootstrap` | Verifies directories, packages, and environment | `python -m backend.app.ml.cli bootstrap` |
 | `demo-train` | One-command end-to-end synthetic demo training | `python -m backend.app.ml.cli demo-train` |
+| `test-sensitivity` | Runs physical monotonicity and geotechnical sensitivity checks | `python -m backend.app.ml.cli test-sensitivity` |
 | `status` | Shows active model status, tier, and metrics | `python -m backend.app.ml.cli status` |
 | `synthetic generate` | Generates configurable synthetic scenario datasets | `python -m backend.app.ml.cli synthetic generate --samples 50000 --seed 42` |
 | `dataset import-gsi` | Imports manually downloaded GSI landslide CSV | `python -m backend.app.ml.cli dataset import-gsi --input data/external/gsi/landslides.csv` |
@@ -99,3 +100,12 @@ python -m backend.app.ml.cli model import --file landslide-bundle.zip
 ```
 
 FastAPI server startup (`backend/app/main.py`) **never calls `model.fit()`**. It strictly loads existing artifacts in `< 50ms`. If no artifact exists, it safely falls back to deterministic physical susceptibility calculations.
+
+---
+
+## 7. Research Model v2 Specification & Scientific Attribution
+
+See [docs/ml/RESEARCH_MODEL_V2.md](RESEARCH_MODEL_V2.md) for full architectural documentation adapting:
+- **Stanley et al. (2021)**: Climatology-normalized rainfall ($P/P_{99}$, $P/P_{95}$), trigger vs. precondition decoupling, TreeSHAP.
+- **Khan et al. (2022)**: 24h numerical forecast precipitation ingestion ($P_{\text{fc}} / P_{99}$), strict issue time bounds ($T_{\text{issue}} \le T_{\text{pred}}$), zero temporal leakage.
+- **Mihu et al. (2026)**: Decoupled static decadal terrain susceptibility, dynamic soil moisture transitions ($\Delta \text{SM}_{6\text{h}}$, $\Delta \text{SM}_{24\text{h}}$, $\Delta \text{SM}_{48\text{h}}$), and strict non-fabrication of unmeasured geological layers.

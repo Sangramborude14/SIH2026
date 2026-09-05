@@ -10,8 +10,11 @@ import pandas as pd
 from backend.app.core.logging import logger
 from backend.app.ml.features.feature_extractor import feature_extractor
 from backend.app.ml.features.pipeline import LandslideFeaturePipeline
+from backend.app.ml.features.pipeline_v2 import ResearchFeaturePipelineV2
+from backend.app.ml.susceptibility.static_model import StaticGeospatialFactors
 from backend.app.models.location import Location
 from backend.app.models.weather import WeatherObservation
+from backend.app.models.weather_forecast import WeatherForecastSnapshot
 
 
 
@@ -251,20 +254,47 @@ class SyntheticLandslideDatasetGenerator:
             )
             current_obs = obs_history[-1]
 
-            # Extract standardized 25-feature vector
-            vector = feature_extractor.extract_features(
-                location=loc,
-                current_obs=current_obs,
-                obs_history=obs_history
-            )
-
-            # Flatten feature vector
-            feature_dict = vector.to_flat_dict()
-
-
             # Scenario & event group IDs
             scenario_id = f"SCEN-{scenario_id_prefix}-{(i // 8):05d}"
             event_id = f"EV-SYNTH-{(i // 8):05d}" if label_24h else None
+
+            # 24h Numerical Forecast Simulation (Khan et al. 2022)
+            fc_rain = (
+                self.rng.uniform(45.0, 140.0)
+                if scenario in ("heavy_rain_high_slope", "extreme_rainfall", "forecast_rain_arriving", "landslide_event")
+                else self.rng.uniform(0.0, 15.0)
+            )
+            fc_snap = WeatherForecastSnapshot(
+                location_id=loc.id,
+                forecast_issued_at=current_obs.timestamp,
+                forecast_valid_at=current_obs.timestamp + timedelta(hours=24),
+                forecast_horizon_hours=24,
+                precipitation_mm=round(fc_rain, 2),
+                source="OPEN_METEO_SIMULATED",
+            )
+
+            static_factors = StaticGeospatialFactors(
+                slope_angle=station_info["slope"],
+                elevation=station_info["elev"],
+                aspect_degrees=self.rng.uniform(0.0, 360.0),
+                curvature=self.rng.uniform(-2.0, 2.0),
+                lithology_strength=round(max(0.1, min(0.9, 1.0 - station_info["susc"] * 0.5 + self.rng.uniform(-0.1, 0.1))), 2),
+                distance_to_active_fault_km=round(self.rng.uniform(5.0, 50.0), 1),
+                lineament_density_km_km2=round(self.rng.uniform(0.5, 4.0), 2),
+                distance_to_road_m=round(self.rng.uniform(50.0, 2500.0), 0),
+                ndvi=round(self.rng.uniform(0.30, 0.85), 2),
+            )
+
+            # Extract research-v2 feature vector (29 features)
+            v2_res = feature_extractor.extract_features_v2(
+                location=loc,
+                current_obs=current_obs,
+                obs_history=obs_history,
+                forecast_snapshot=fc_snap,
+                static_factors=static_factors,
+                prediction_time=current_obs.timestamp,
+            )
+            feature_dict = v2_res["features"]
 
             # Auxiliary horizons
             label_12h = 1 if (label_24h and delay_h <= 12.0) else 0
@@ -290,7 +320,8 @@ class SyntheticLandslideDatasetGenerator:
                 "generator_version": self.GENERATOR_VERSION,
                 "seed": self.random_seed,
 
-                # 25-Feature Schema Values
+                # 29-Feature Schema Values & Backward Compatibility Aliases
+                "rainfall_24h": feature_dict.get("current_rainfall_24h", 0.0),
                 **feature_dict
             }
             rows.append(row)
@@ -301,7 +332,7 @@ class SyntheticLandslideDatasetGenerator:
 
         # Dataset Manifest
         manifest = {
-            "dataset_name": "synthetic_landslide_v1",
+            "dataset_name": "synthetic_landslide_v2_research",
             "dataset_version": f"v{self.GENERATOR_VERSION}",
             "source": "SYNTHETIC_SCENARIO_ENGINE",
             "created_at": datetime.now(timezone.utc).isoformat(),
@@ -315,8 +346,9 @@ class SyntheticLandslideDatasetGenerator:
             "validation_level": "SIMULATION_ONLY",
             "generator_version": self.GENERATOR_VERSION,
             "random_seed": self.random_seed,
-            "feature_count": len(LandslideFeaturePipeline.FEATURE_NAMES),
-            "features": LandslideFeaturePipeline.FEATURE_NAMES,
+            "feature_schema_version": "2.0.0-research",
+            "feature_count": len(ResearchFeaturePipelineV2.FEATURE_NAMES),
+            "features": ResearchFeaturePipelineV2.FEATURE_NAMES,
         }
 
 

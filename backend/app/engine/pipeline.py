@@ -33,6 +33,7 @@ from backend.app.schemas.engine import (
 )
 from backend.app.core.config import settings
 from backend.app.core.logging import logger
+from backend.app.core.cache import invalidate_station_risk
 
 
 class DisasterIntelligenceEngine:
@@ -174,6 +175,7 @@ class DisasterIntelligenceEngine:
         session.add(history_record)
 
         await session.flush()
+        await invalidate_station_risk(location.id)
         return assessment_output, event, action
 
     def format_assessment_response(

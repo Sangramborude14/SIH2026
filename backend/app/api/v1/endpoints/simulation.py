@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from backend.app.api.deps import get_db
+from backend.app.api.deps import get_db, require_role
+from backend.app.models.user import User
 from backend.app.schemas.simulation import SimulationScenarioRequest, SimulationScenarioResponse
 from backend.app.services.simulation_service import SimulationService
 from backend.app.core.logging import logger
@@ -11,6 +12,7 @@ router = APIRouter()
 @router.post("/scenario", response_model=SimulationScenarioResponse)
 async def simulate_scenario(
     request: SimulationScenarioRequest,
+    current_user: User = Depends(require_role(["EXPERT", "ADMIN"])),
     db: AsyncSession = Depends(get_db)
 ):
     """

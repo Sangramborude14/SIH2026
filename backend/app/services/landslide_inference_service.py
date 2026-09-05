@@ -5,10 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.app.models.location import Location
 from backend.app.models.weather import WeatherObservation
+from backend.app.models.weather_forecast import WeatherForecastSnapshot
 from backend.app.models.ml_forecast import LandslideForecastRecord
 from backend.app.ml.features.feature_extractor import feature_extractor
 from backend.app.ml.registry.model_registry import model_registry
 from backend.app.ml.types import ForecastHorizon
+from backend.app.engine.climatology import climatology_service
+from backend.app.ml.susceptibility import static_susceptibility_model, StaticGeospatialFactors
 from backend.app.schemas.ml_forecast import (
     ForecastHorizonDetail,
     CurrentConditionSummary,
@@ -27,6 +30,7 @@ class LandslideInferenceService:
     Transforms live weather observations, historical sequences, and static terrain features
     into calibrated future landslide probabilities across feasible forecast horizons.
     Ensures absolute semantic separation between deterministic risk, anomaly scores, and ML probabilities.
+    Incorporates concepts from Stanley et al. (2021), Khan et al. (2022), and Mihu et al. (2026).
     """
 
     @staticmethod
@@ -61,6 +65,8 @@ class LandslideInferenceService:
         obs_history: List[WeatherObservation],
         deterministic_risk_score: float = 10.0,
         deterministic_risk_level: str = "LOW",
+        forecast_snapshot: Optional[WeatherForecastSnapshot] = None,
+        static_factors: Optional[StaticGeospatialFactors] = None,
         persist: bool = True,
     ) -> LocationForecastResponse:
         now = datetime.now(timezone.utc)
@@ -70,7 +76,26 @@ class LandslideInferenceService:
 
         data_freshness = self.evaluate_data_freshness(latest_obs.timestamp if latest_obs else None)
 
-        # 1. Build standardized 25-feature vector
+        # 0. Retrieve latest valid forecast snapshot if not provided
+        if forecast_snapshot is None and session is not None:
+            try:
+                stmt_fc = (
+                    select(WeatherForecastSnapshot)
+                    .where(
+                        WeatherForecastSnapshot.location_id == location.id,
+                        WeatherForecastSnapshot.forecast_issued_at <= now,
+                        WeatherForecastSnapshot.forecast_valid_at > now,
+                    )
+                    .order_by(WeatherForecastSnapshot.forecast_issued_at.desc())
+                    .limit(1)
+                )
+                res_fc = await session.execute(stmt_fc)
+                forecast_snapshot = res_fc.scalars().first()
+            except Exception as e:
+                logger.warning(f"Could not load WeatherForecastSnapshot for {location.id}: {e}")
+                forecast_snapshot = None
+
+        # 1. Build standardized feature vectors (v1 and optional v2)
         vector = feature_extractor.extract_features(
             location=location,
             current_obs=latest_obs,
@@ -88,7 +113,22 @@ class LandslideInferenceService:
             is_statistically_anomalous=anomaly_output.is_statistically_anomalous,
         )
 
-        # 3. Task B: ML Landslide Probability Forecasting
+        # 3. Climatology calculations (Stanley et al. 2021)
+        clim = climatology_service.get_station_climatology(location.id)
+        r24 = float(latest_obs.rainfall_24h or 0.0) if latest_obs else 0.0
+        r24_p99_ratio, _ = climatology_service.calculate_p99_ratio(r24, location.id)
+        r24_p95_ratio, _ = climatology_service.calculate_p95_ratio(r24, location.id)
+
+        fc_precip_24h = float(forecast_snapshot.precipitation_mm or 0.0) if forecast_snapshot else 0.0
+        fc_p99_ratio, _ = climatology_service.calculate_forecast_p99_ratio(fc_precip_24h, location.id)
+
+        # 4. Decoupled Static Susceptibility Evaluation (Mihu et al. 2026)
+        susc_eval = static_susceptibility_model.evaluate_station(location, static_factors)
+        static_susc_score = round(susc_eval.susceptibility_score, 4)
+        susc_version = susc_eval.model_version
+        susc_avail = susc_eval.features_available
+
+        # 5. Task B: ML Landslide Probability Forecasting
         forecast_dict: Dict[str, ForecastHorizonDetail] = {}
         model_contributions: List[Dict[str, Any]] = []
         is_trained = model_registry.is_trained_model_active()
@@ -98,7 +138,22 @@ class LandslideInferenceService:
 
         if is_trained:
             predictor = model_registry.get_active_predictor()
-            pred_res = predictor.predict(vector)
+            schema_version = getattr(predictor, "schema_version", "1.0.0")
+            is_v2 = schema_version.startswith("2.")
+
+            if is_v2:
+                v2_dict = feature_extractor.extract_features_v2(
+                    location=location,
+                    current_obs=latest_obs,
+                    obs_history=obs_history,
+                    forecast_snapshot=forecast_snapshot,
+                    static_factors=static_factors,
+                    prediction_time=now,
+                )
+                pred_res = predictor.predict(v2_dict)
+            else:
+                pred_res = predictor.predict(vector)
+
             model_version = pred_res.model_version
             disclaimer = pred_res.disclaimer
 
@@ -142,7 +197,7 @@ class LandslideInferenceService:
                 "Forecasts rely strictly on the deterministic baseline physics engine."
             )
 
-        # 4. Generate transparent Observed Risk Indicators (physical ground-truth observations)
+        # 6. Generate transparent Observed Risk Indicators (physical ground-truth observations)
         observed_drivers: List[str] = []
         rain_24h = vector.rainfall_24h.value
         rain_72h = vector.rainfall_72h.value
@@ -169,7 +224,19 @@ class LandslideInferenceService:
         if not observed_drivers:
             observed_drivers.append("All observed environmental indicators currently within stable baseline tolerances.")
 
-        # 5. Database Persistence
+        # 7. Dynamic Soil Moisture Transitions & Antecedent 48h (Dibang Valley Mihu et al. 2026)
+        if len(obs_history) >= 48:
+            r48_antecedent = round(sum(o.rainfall_1h or 0.0 for o in obs_history[-48:-24]), 2)
+        else:
+            r48_antecedent = round(max(0.0, rain_72h - rain_24h) * 0.65, 2)
+
+        sm_base = soil_m
+        sm_6h_val = obs_history[-6].soil_moisture if len(obs_history) >= 6 and obs_history[-6].soil_moisture is not None else sm_base
+        sm_24h_val = obs_history[-24].soil_moisture if len(obs_history) >= 24 and obs_history[-24].soil_moisture is not None else sm_base
+        sm_trend_6h = round(float(sm_base - sm_6h_val), 2)
+        sm_trend_24h = round(float(sm_base - sm_24h_val), 2)
+
+        # 8. Database Persistence
         if persist and session and is_trained:
             for h_str, h_detail in forecast_dict.items():
                 rec = LandslideForecastRecord(
@@ -220,6 +287,18 @@ class LandslideInferenceService:
             observed_drivers=observed_drivers,
             model_contributions=model_contributions,
             disclaimer=disclaimer,
+            static_susceptibility_score=static_susc_score,
+            susceptibility_model_version=susc_version,
+            susceptibility_features_available=susc_avail,
+            forecast_issue_time=forecast_snapshot.forecast_issued_at if forecast_snapshot else None,
+            climatology_p99_24h=clim.p99_24h if clim else 150.0,
+            climatology_p95_24h=clim.p95_24h if clim else 80.0,
+            current_rainfall_p99_ratio=round(r24_p99_ratio, 3) if r24_p99_ratio is not None else None,
+            forecast_rainfall_p99_ratio=round(fc_p99_ratio, 3) if fc_p99_ratio is not None else None,
+            antecedent_rainfall_48h=r48_antecedent,
+            soil_moisture_trend_6h=sm_trend_6h,
+            soil_moisture_trend_24h=sm_trend_24h,
+            shap_attributions=model_contributions,
         )
 
     async def generate_forecast_for_all_locations(
@@ -316,19 +395,30 @@ class LandslideInferenceService:
                     "elevation": fc.elevation,
                     "slope_angle": fc.slope_angle,
                     "baseline_susceptibility": fc.baseline_susceptibility,
+                    "static_susceptibility": fc.static_susceptibility_score,
+                    "susceptibility_model_version": fc.susceptibility_model_version,
                     "deterministic_risk_score": fc.current_condition.deterministic_risk_score,
                     "deterministic_risk_level": fc.current_condition.risk_level,
                     "anomaly_score": fc.environmental_anomaly.score,
                     "anomaly_level": fc.environmental_anomaly.status,
                     "landslide_probability_24h": p24_val,
+                    "forecast_probability_24h": p24_val,
                     "risk_class_24h": r_class,
                     "forecast_horizon": "24H",
+                    "current_rainfall_p99_ratio": fc.current_rainfall_p99_ratio,
+                    "forecast_rainfall_p99_ratio": fc.forecast_rainfall_p99_ratio,
+                    "antecedent_rainfall_48h": fc.antecedent_rainfall_48h,
+                    "soil_moisture_trend_6h": fc.soil_moisture_trend_6h,
+                    "soil_moisture_trend_24h": fc.soil_moisture_trend_24h,
                     "data_freshness": fc.data_freshness,
                     "model_version": fc.model_version,
                     "model_status": fc.model_status,
                     "observation_timestamp": fc.data_timestamp.isoformat(),
                     "prediction_timestamp": fc.generated_at.isoformat(),
+                    "forecast_issue_time": fc.forecast_issue_time.isoformat() if fc.forecast_issue_time else None,
                     "observed_drivers": fc.observed_drivers,
+                    "top_contributing_factors": fc.model_contributions,
+                    "shap_attributions": fc.shap_attributions,
                 },
             )
             features.append(feat)

@@ -30,6 +30,8 @@ from backend.app.models.ml_forecast import LandslideForecastRecord
 from backend.app.models.weather_forecast import WeatherForecastSnapshot
 from backend.app.models.landslide_event import LandslideEvent, TimePrecision
 from backend.app.models.ml_model_record import MLModelVersionRecord
+from backend.app.models.citizen import CitizenSOS, CitizenReport
+from backend.app.models.user import User, RefreshToken
 
 
 __all__ = [
@@ -58,6 +60,10 @@ __all__ = [
     "LandslideEvent",
     "TimePrecision",
     "MLModelVersionRecord",
+    "CitizenSOS",
+    "CitizenReport",
+    "User",
+    "RefreshToken",
 ]
 
 

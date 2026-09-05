@@ -17,9 +17,13 @@ from backend.app.api.v1.endpoints import (
     earth_observation,
     notifications,
     ml,
+    citizen,
+    auth,
 )
 
 api_router = APIRouter()
+
+api_router.include_router(auth.router, prefix="/auth", tags=["Authentication & Access Control"])
 
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard Intelligence"])
 api_router.include_router(locations.router, prefix="/locations", tags=["Locations"])
@@ -33,6 +37,7 @@ api_router.include_router(system.router, prefix="/system", tags=["System & Provi
 api_router.include_router(ai.router, prefix="/ai", tags=["Agentic AI Intelligence"])
 api_router.include_router(field.router, prefix="/field", tags=["Field Operations & Rescue"])
 api_router.include_router(public.router, prefix="/public", tags=["Public Disaster Alerts & Safety"])
+api_router.include_router(citizen.router, prefix="/citizen", tags=["Citizen Disaster Portal & Safety"])
 api_router.include_router(alerts.router, prefix="/alerts", tags=["CAP Feeds, SitReps & Multi-Channel Alerting"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Push Notifications & FCM Device Registry"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["Historical Analytics, Playback & Calibration"])

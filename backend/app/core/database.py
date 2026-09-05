@@ -112,6 +112,8 @@ async def init_db():
         audit,
         public,
         earth_observation,
+        citizen,
+        user,
     )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

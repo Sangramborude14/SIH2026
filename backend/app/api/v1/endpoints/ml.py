@@ -21,8 +21,12 @@ from backend.app.schemas.ml_forecast import (
     LocationForecastResponse,
     MultiLocationForecastResponse,
     GISHeatmapResponse,
+    SusceptibilityDetailResponse,
+    ClimatologyResponse,
 )
 from backend.app.services.landslide_inference_service import landslide_inference_service
+from backend.app.engine.climatology import climatology_service
+from backend.app.ml.susceptibility import static_susceptibility_model
 
 router = APIRouter()
 
@@ -300,4 +304,69 @@ async def get_gis_heatmap(
         persist=False,
     )
     return landslide_inference_service.generate_gis_heatmap(multi_fc)
+
+
+@router.get("/susceptibility/{location_id}", response_model=SusceptibilityDetailResponse)
+async def get_station_susceptibility(
+    location_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Decoupled Static Geotechnical Susceptibility Assessment (inspired by Mihu et al., 2026).
+    Evaluates terrain failure predisposition without dynamic precipitation triggers.
+    Audits available vs missing layers to ensure zero synthetic data fabrication.
+    """
+    location = await LocationService.get_location_by_id(db, location_id)
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Monitored location '{location_id}' not found."
+        )
+
+    res = static_susceptibility_model.evaluate_station(location)
+    return SusceptibilityDetailResponse(
+        location_id=res.location_id,
+        station_name=res.station_name,
+        susceptibility_score=round(res.susceptibility_score, 4),
+        susceptibility_class=res.susceptibility_class,
+        status=res.status.value,
+        model_version=res.model_version,
+        features_available=res.features_available,
+        features_missing=res.features_missing,
+        geotechnical_explanation=res.geotechnical_explanation,
+        disclaimer=res.disclaimer,
+    )
+
+
+@router.get("/climatology/{location_id}", response_model=ClimatologyResponse)
+async def get_station_climatology(
+    location_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Empirical Rainfall Climatology Percentiles (inspired by Stanley et al., 2021).
+    Returns location-specific historical 90th, 95th, and 99th rainfall thresholds
+    for dynamic normalization and extreme monsoonal anomaly detection.
+    """
+    location = await LocationService.get_location_by_id(db, location_id)
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Monitored location '{location_id}' not found."
+        )
+
+    clim = climatology_service.get_station_climatology(location_id)
+    return ClimatologyResponse(
+        location_id=clim.location_id,
+        station_name=location.name,
+        p90_24h=clim.p90_24h,
+        p95_24h=clim.p95_24h,
+        p99_24h=clim.p99_24h,
+        p90_1h=clim.p90_1h,
+        p95_1h=clim.p95_1h,
+        p99_1h=clim.p99_1h,
+        source=clim.source,
+        disclaimer=clim.disclaimer,
+    )
+
 

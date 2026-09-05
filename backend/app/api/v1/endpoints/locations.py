@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.api.deps import get_db
+from backend.app.core.cache import cache, CacheKeys
 from backend.app.models.location import Location
 from backend.app.models.weather import WeatherObservation
 from backend.app.models.risk import RiskAssessment
@@ -46,57 +47,88 @@ async def get_locations_for_map(db: AsyncSession = Depends(get_db)):
     """
     Returns all monitored stations enriched with current risk score,
     latest weather readings, and active disaster events for GIS map rendering.
+    Cached under 'sih:gis:map' (TTL 30s) with consolidated batch queries.
     """
+    cache_key = CacheKeys.gis_map()
+    cached_map = await cache.get(cache_key)
+    if cached_map and isinstance(cached_map, list):
+        try:
+            return [LocationMapItem(**item) for item in cached_map]
+        except Exception:
+            pass
+
     locations = await LocationService.get_all_locations(db)
+    if not locations:
+        return []
+
+    loc_ids = [loc.id for loc in locations]
+
+    # 1. Batch load latest active events
+    active_events_stmt = (
+        select(DisasterEvent)
+        .where(and_(DisasterEvent.location_id.in_(loc_ids), DisasterEvent.status != "RESOLVED"))
+        .order_by(DisasterEvent.detected_at.desc())
+    )
+    all_active_events = list((await db.execute(active_events_stmt)).scalars().all())
+    event_map = {}
+    for ev in all_active_events:
+        if ev.location_id not in event_map:
+            event_map[ev.location_id] = ev
+
+    # 2. Batch load latest risk assessments
+    subq_r = (
+        select(RiskAssessment.location_id, func.max(RiskAssessment.timestamp).label("max_ts"))
+        .where(RiskAssessment.location_id.in_(loc_ids))
+        .group_by(RiskAssessment.location_id)
+        .subquery()
+    )
+    latest_risks_stmt = (
+        select(RiskAssessment)
+        .join(subq_r, and_(RiskAssessment.location_id == subq_r.c.location_id, RiskAssessment.timestamp == subq_r.c.max_ts))
+    )
+    all_latest_risks = list((await db.execute(latest_risks_stmt)).scalars().all())
+    risk_map = {r.location_id: r for r in all_latest_risks}
+
+    # 3. Batch load latest weather observations
+    subq_w = (
+        select(WeatherObservation.location_id, func.max(WeatherObservation.timestamp).label("max_ts"))
+        .where(WeatherObservation.location_id.in_(loc_ids))
+        .group_by(WeatherObservation.location_id)
+        .subquery()
+    )
+    latest_weather_stmt = (
+        select(WeatherObservation)
+        .join(subq_w, and_(WeatherObservation.location_id == subq_w.c.location_id, WeatherObservation.timestamp == subq_w.c.max_ts))
+    )
+    all_latest_weather = list((await db.execute(latest_weather_stmt)).scalars().all())
+    weather_map = {w.location_id: w for w in all_latest_weather}
+
+    # 4. Batch load recent ML forecasts
+    fc_stmt = (
+        select(LandslideForecastRecord)
+        .where(LandslideForecastRecord.location_id.in_(loc_ids))
+        .order_by(LandslideForecastRecord.prediction_timestamp.desc())
+    )
+    all_fc = list((await db.execute(fc_stmt)).scalars().all())
+    fc_map = {}
+    for fc in all_fc:
+        if fc.location_id not in fc_map:
+            fc_map[fc.location_id] = []
+        if len(fc_map[fc.location_id]) < 3:
+            fc_map[fc.location_id].append(fc)
+
     map_items: List[LocationMapItem] = []
+    is_trained = model_registry.is_trained_model_active()
 
     for loc in locations:
-        risk_stmt = (
-            select(RiskAssessment)
-            .where(RiskAssessment.location_id == loc.id)
-            .order_by(RiskAssessment.timestamp.desc())
-            .limit(1)
-        )
-        risk_res = await db.execute(risk_stmt)
-        latest_risk = risk_res.scalars().first()
-
-        if not latest_risk:
-            assessment_out, _, _ = await disaster_engine.evaluate_location(db, loc)
-            await db.commit()
-            risk_res = await db.execute(risk_stmt)
-            latest_risk = risk_res.scalars().first()
-
-        event_stmt = (
-            select(DisasterEvent)
-            .where(and_(DisasterEvent.location_id == loc.id, DisasterEvent.status != "RESOLVED"))
-            .order_by(DisasterEvent.detected_at.desc())
-            .limit(1)
-        )
-        event_res = await db.execute(event_stmt)
-        active_event = event_res.scalars().first()
-
-        weather_stmt = (
-            select(WeatherObservation)
-            .where(WeatherObservation.location_id == loc.id)
-            .order_by(WeatherObservation.timestamp.desc())
-            .limit(1)
-        )
-        weather_res = await db.execute(weather_stmt)
-        latest_weather = weather_res.scalars().first()
-
-        # Query latest ML forecast records
-        fc_stmt = (
-            select(LandslideForecastRecord)
-            .where(LandslideForecastRecord.location_id == loc.id)
-            .order_by(LandslideForecastRecord.prediction_timestamp.desc())
-            .limit(3)
-        )
-        fc_res = await db.execute(fc_stmt)
-        fc_records = list(fc_res.scalars().all())
+        latest_risk = risk_map.get(loc.id)
+        active_event = event_map.get(loc.id)
+        latest_weather = weather_map.get(loc.id)
+        fc_records = fc_map.get(loc.id, [])
 
         forecast_probs: dict = {}
         model_version = "2.0.0"
-        model_status = "READY" if model_registry.is_trained_model_active() else "NOT_TRAINED"
+        model_status = "READY" if is_trained else "NOT_TRAINED"
         data_freshness = "FRESH"
         for fc in fc_records:
             h_key = fc.forecast_horizon.lower()
@@ -105,24 +137,6 @@ async def get_locations_for_map(db: AsyncSession = Depends(get_db)):
             model_version = fc.model_version
             model_status = fc.model_status
             data_freshness = fc.data_freshness
-
-        # If no persisted forecast yet but trained model is active, generate now
-        if not forecast_probs and model_registry.is_trained_model_active():
-            from backend.app.services.landslide_inference_service import landslide_inference_service
-            quick_fc = await landslide_inference_service.generate_forecast_for_location(
-                session=db,
-                location=loc,
-                latest_obs=latest_weather,
-                obs_history=[latest_weather] if latest_weather else [],
-                deterministic_risk_score=latest_risk.risk_score if latest_risk else 10.0,
-                deterministic_risk_level=latest_risk.risk_level if latest_risk else "LOW",
-                persist=True,
-            )
-            for h_str, h_det in quick_fc.forecast.items():
-                if h_det.landslide_probability is not None:
-                    forecast_probs[h_str] = h_det.landslide_probability
-            data_freshness = quick_fc.data_freshness
-            model_status = quick_fc.model_status
 
         item = LocationMapItem(
             id=loc.id,
@@ -155,6 +169,11 @@ async def get_locations_for_map(db: AsyncSession = Depends(get_db)):
             data_freshness=data_freshness,
         )
         map_items.append(item)
+
+    try:
+        await cache.set(cache_key, [item.model_dump(mode="json") for item in map_items], ttl_seconds=30)
+    except Exception as e:
+        logger.debug(f"Cache write error for map: {e}")
 
     return map_items
 

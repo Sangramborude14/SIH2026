@@ -1,206 +1,358 @@
 {
-  "schema_version": "1.0.0",
-  "feature_count": 25,
+  "schema_version": "2.0.0-research",
+  "feature_count": 29,
   "features": [
     {
-      "name": "slope_angle",
-      "type": "float",
-      "unit": "degrees",
-      "min": 0.0,
-      "max": 90.0,
-      "default": 30.0
-    },
-    {
-      "name": "elevation",
-      "type": "float",
-      "unit": "m",
-      "min": 0.0,
-      "max": 8000.0,
-      "default": 1000.0
-    },
-    {
-      "name": "aspect_sin",
-      "type": "float",
-      "unit": "rad",
-      "min": -1.0,
-      "max": 1.0,
-      "default": 0.0
-    },
-    {
-      "name": "aspect_cos",
-      "type": "float",
-      "unit": "rad",
-      "min": -1.0,
-      "max": 1.0,
-      "default": 1.0
-    },
-    {
-      "name": "baseline_susceptibility",
-      "type": "float",
-      "unit": "score",
-      "min": 0.0,
-      "max": 1.0,
-      "default": 0.5
-    },
-    {
-      "name": "rainfall_1h",
-      "type": "float",
-      "unit": "mm",
-      "min": 0.0,
-      "max": 300.0,
-      "default": 0.0
-    },
-    {
-      "name": "rainfall_3h",
-      "type": "float",
-      "unit": "mm",
-      "min": 0.0,
-      "max": 500.0,
-      "default": 0.0
-    },
-    {
-      "name": "rainfall_6h",
-      "type": "float",
-      "unit": "mm",
-      "min": 0.0,
-      "max": 600.0,
-      "default": 0.0
-    },
-    {
-      "name": "rainfall_12h",
-      "type": "float",
-      "unit": "mm",
-      "min": 0.0,
-      "max": 800.0,
-      "default": 0.0
-    },
-    {
-      "name": "rainfall_24h",
+      "name": "current_rainfall_24h",
+      "role": "TRIGGER",
       "type": "float",
       "unit": "mm",
       "min": 0.0,
       "max": 1000.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Observed cumulative rainfall in the last 24h leading up to prediction time T."
     },
     {
-      "name": "rainfall_48h",
+      "name": "current_rainfall_p99_ratio",
+      "role": "TRIGGER",
+      "type": "float",
+      "unit": "ratio",
+      "min": 0.0,
+      "max": 15.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Current 24h rainfall divided by location-specific historical 99th percentile (LHASA)."
+    },
+    {
+      "name": "current_rainfall_p95_ratio",
+      "role": "TRIGGER",
+      "type": "float",
+      "unit": "ratio",
+      "min": 0.0,
+      "max": 20.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Current 24h rainfall divided by location-specific historical 95th percentile."
+    },
+    {
+      "name": "forecast_precipitation_24h",
+      "role": "TRIGGER",
+      "type": "float",
+      "unit": "mm",
+      "min": 0.0,
+      "max": 1000.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Numerical weather forecast rainfall for upcoming 24h window (T to T+24h)."
+    },
+    {
+      "name": "forecast_rainfall_p99_ratio",
+      "role": "TRIGGER",
+      "type": "float",
+      "unit": "ratio",
+      "min": 0.0,
+      "max": 15.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Forecast 24h rainfall divided by location-specific historical 99th percentile."
+    },
+    {
+      "name": "antecedent_rainfall_48h",
+      "role": "PRECONDITION",
       "type": "float",
       "unit": "mm",
       "min": 0.0,
       "max": 1500.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Precipitation accumulated between T-48h and T-24h (prior regolith wetting)."
     },
     {
       "name": "rainfall_72h",
+      "role": "PRECONDITION",
       "type": "float",
       "unit": "mm",
       "min": 0.0,
       "max": 2000.0,
-      "default": 0.0
-    },
-    {
-      "name": "rainfall_7d",
-      "type": "float",
-      "unit": "mm",
-      "min": 0.0,
-      "max": 3000.0,
-      "default": 0.0
-    },
-    {
-      "name": "consecutive_wet_hours",
-      "type": "float",
-      "unit": "hours",
-      "min": 0.0,
-      "max": 720.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Total cumulative 72-hour rainfall."
     },
     {
       "name": "antecedent_precipitation_index",
+      "role": "PRECONDITION",
       "type": "float",
       "unit": "API",
       "min": 0.0,
       "max": 500.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Exponential decay antecedent precipitation index."
     },
     {
-      "name": "rainfall_z_score_24h",
+      "name": "consecutive_wet_hours",
+      "role": "PRECONDITION",
       "type": "float",
-      "unit": "sigma",
-      "min": -5.0,
-      "max": 15.0,
-      "default": 0.0
-    },
-    {
-      "name": "id_curve_ratio",
-      "type": "float",
-      "unit": "ratio",
+      "unit": "hours",
       "min": 0.0,
-      "max": 10.0,
-      "default": 0.0
+      "max": 720.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Hours with continuous rainfall >= 0.5 mm/h."
     },
     {
       "name": "soil_moisture_surface",
+      "role": "SOIL_DYNAMICS",
       "type": "float",
       "unit": "%",
       "min": 0.0,
       "max": 100.0,
-      "default": 35.0
+      "default": 35.0,
+      "monotone_constraint": 1,
+      "description": "Current surface layer volumetric soil moisture (0-7 cm)."
     },
     {
       "name": "soil_moisture_middle",
+      "role": "SOIL_DYNAMICS",
       "type": "float",
       "unit": "%",
       "min": 0.0,
       "max": 100.0,
-      "default": 35.0
+      "default": 35.0,
+      "monotone_constraint": 0,
+      "description": "Subsurface root-zone soil moisture (7-28 cm)."
     },
     {
       "name": "soil_moisture_deep",
+      "role": "SOIL_DYNAMICS",
       "type": "float",
       "unit": "%",
       "min": 0.0,
       "max": 100.0,
-      "default": 35.0
+      "default": 35.0,
+      "monotone_constraint": 0,
+      "description": "Deep regolith pore water stratum (28-100 cm)."
     },
     {
-      "name": "soil_moisture_change_6h",
+      "name": "soil_moisture_delta_6h",
+      "role": "SOIL_DYNAMICS",
       "type": "float",
       "unit": "%",
       "min": -50.0,
       "max": 50.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 0,
+      "description": "Rate of wetting transition: SM(T) - SM(T-6h)."
     },
     {
-      "name": "soil_moisture_change_24h",
+      "name": "soil_moisture_delta_24h",
+      "role": "SOIL_DYNAMICS",
       "type": "float",
       "unit": "%",
       "min": -80.0,
       "max": 80.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 0,
+      "description": "24h soil moisture trajectory: SM(T) - SM(T-24h)."
     },
     {
-      "name": "month_sin",
+      "name": "soil_moisture_delta_48h",
+      "role": "SOIL_DYNAMICS",
+      "type": "float",
+      "unit": "%",
+      "min": -80.0,
+      "max": 80.0,
+      "default": 0.0,
+      "monotone_constraint": 0,
+      "description": "48h cumulative saturation transition: SM(T) - SM(T-48h)."
+    },
+    {
+      "name": "wetness_percentile",
+      "role": "SOIL_DYNAMICS",
+      "type": "float",
+      "unit": "ratio",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.4,
+      "monotone_constraint": 1,
+      "description": "Current surface wetness relative to field capacity (SM / 100.0)."
+    },
+    {
+      "name": "dry_to_wet_transition",
+      "role": "SOIL_DYNAMICS",
+      "type": "float",
+      "unit": "indicator",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Binary flag indicating rapid saturation of previously dry soil (<40% to >70%)."
+    },
+    {
+      "name": "rainfall_x_soil_wetness",
+      "role": "SOIL_DYNAMICS",
+      "type": "float",
+      "unit": "interaction",
+      "min": 0.0,
+      "max": 15.0,
+      "default": 0.0,
+      "monotone_constraint": 1,
+      "description": "Cross-product interaction: (current_rainfall_p99_ratio) * (soil_moisture_surface / 100)."
+    },
+    {
+      "name": "slope_angle",
+      "role": "TOPOGRAPHY",
+      "type": "float",
+      "unit": "degrees",
+      "min": 0.0,
+      "max": 90.0,
+      "default": 30.0,
+      "monotone_constraint": 1,
+      "description": "Terrain slope angle (DEM)."
+    },
+    {
+      "name": "elevation",
+      "role": "TOPOGRAPHY",
+      "type": "float",
+      "unit": "m",
+      "min": 0.0,
+      "max": 8000.0,
+      "default": 1000.0,
+      "monotone_constraint": 0,
+      "description": "Terrain elevation above sea level."
+    },
+    {
+      "name": "aspect_sin",
+      "role": "TOPOGRAPHY",
       "type": "float",
       "unit": "rad",
       "min": -1.0,
       "max": 1.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 0,
+      "description": "Sine of terrain aspect angle."
     },
     {
-      "name": "month_cos",
+      "name": "aspect_cos",
+      "role": "TOPOGRAPHY",
       "type": "float",
       "unit": "rad",
       "min": -1.0,
       "max": 1.0,
-      "default": 1.0
+      "default": 1.0,
+      "monotone_constraint": 0,
+      "description": "Cosine of terrain aspect angle."
+    },
+    {
+      "name": "susceptibility_prior",
+      "role": "TOPOGRAPHY",
+      "type": "float",
+      "unit": "score",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.5,
+      "monotone_constraint": 1,
+      "description": "Decoupled static terrain susceptibility score."
     },
     {
       "name": "is_monsoon_season",
+      "role": "TEMPORAL",
       "type": "float",
       "unit": "binary",
       "min": 0.0,
       "max": 1.0,
-      "default": 0.0
+      "default": 0.0,
+      "monotone_constraint": 0,
+      "description": "Binary indicator for Indian monsoon months (June-September)."
+    },
+    {
+      "name": "lithology_strength",
+      "role": "STATIC_GIS",
+      "type": "float",
+      "unit": "index",
+      "min": 0.0,
+      "max": 1.0,
+      "default": 0.5,
+      "monotone_constraint": -1,
+      "description": "Rock mass strength index (0=weak/sheared, 1=massive crystalline)."
+    },
+    {
+      "name": "distance_to_active_fault",
+      "role": "STATIC_GIS",
+      "type": "float",
+      "unit": "km",
+      "min": 0.0,
+      "max": 100.0,
+      "default": 25.0,
+      "monotone_constraint": -1,
+      "description": "Distance to mapped regional thrust/fault line."
+    },
+    {
+      "name": "lineament_density",
+      "role": "STATIC_GIS",
+      "type": "float",
+      "unit": "km_per_km2",
+      "min": 0.0,
+      "max": 10.0,
+      "default": 1.5,
+      "monotone_constraint": 1,
+      "description": "Structural lineament fracture density."
+    },
+    {
+      "name": "distance_to_road",
+      "role": "STATIC_GIS",
+      "type": "float",
+      "unit": "m",
+      "min": 0.0,
+      "max": 10000.0,
+      "default": 1000.0,
+      "monotone_constraint": -1,
+      "description": "Distance to cut slope / road infrastructure."
+    },
+    {
+      "name": "ndvi",
+      "role": "STATIC_GIS",
+      "type": "float",
+      "unit": "index",
+      "min": -1.0,
+      "max": 1.0,
+      "default": 0.55,
+      "monotone_constraint": -1,
+      "description": "Normalized Difference Vegetation Index."
     }
+  ],
+  "trigger_features": [
+    "current_rainfall_24h",
+    "current_rainfall_p99_ratio",
+    "current_rainfall_p95_ratio",
+    "forecast_precipitation_24h",
+    "forecast_rainfall_p99_ratio"
+  ],
+  "precondition_features": [
+    "antecedent_rainfall_48h",
+    "rainfall_72h",
+    "antecedent_precipitation_index",
+    "consecutive_wet_hours",
+    "soil_moisture_surface",
+    "soil_moisture_middle",
+    "soil_moisture_deep",
+    "soil_moisture_delta_6h",
+    "soil_moisture_delta_24h",
+    "soil_moisture_delta_48h",
+    "wetness_percentile",
+    "dry_to_wet_transition",
+    "rainfall_x_soil_wetness",
+    "slope_angle",
+    "elevation",
+    "aspect_sin",
+    "aspect_cos",
+    "susceptibility_prior",
+    "is_monsoon_season",
+    "lithology_strength",
+    "distance_to_active_fault",
+    "lineament_density",
+    "distance_to_road",
+    "ndvi"
   ]
 }

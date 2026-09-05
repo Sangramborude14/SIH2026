@@ -45,6 +45,13 @@ class ModelTier(str, Enum):
     TABULAR_ML_LOGISTIC = "TABULAR_ML_LOGISTIC"
     TABULAR_ML_RANDOM_FOREST = "TABULAR_ML_RANDOM_FOREST"
     TABULAR_ML_GRADIENT_BOOST = "TABULAR_ML_GRADIENT_BOOST"
+    TABULAR_ML_XGBOOST = "TABULAR_ML_XGBOOST"
+    TABULAR_ML_XGBOOST_CONSTRAINED = "TABULAR_ML_XGBOOST_CONSTRAINED"
+
+
+class TemporalLeakageError(ValueError):
+    """Raised when an observation or forecast violates strict temporal causality."""
+    pass
 
 
 class TaggedFeatureValue(BaseModel):
@@ -169,6 +176,11 @@ class LandslidePredictionOutput(BaseModel):
     primary_contributing_features: List[Dict[str, Any]]
     confidence_score: float = Field(..., ge=0.0, le=1.0)
     disclaimer: str
+    susceptibility_score: Optional[float] = None
+    susceptibility_model_version: Optional[str] = None
+    susceptibility_features_available: Optional[List[str]] = None
+    forecast_issue_time: Optional[datetime] = None
+    feature_schema_version: Optional[str] = "2.0.0"
 
 
 class ModelMetadata(BaseModel):
@@ -188,6 +200,10 @@ class ModelMetadata(BaseModel):
     training_timestamp: Optional[datetime] = None
     feature_names: List[str]
     validation_roc_auc: Optional[float] = None
+    validation_pr_auc: Optional[float] = None
     validation_f1_score: Optional[float] = None
     validation_brier_score: Optional[float] = None
+    feature_schema_version: Optional[str] = "2.0.0"
+    candidate_comparison: Optional[List[Dict[str, Any]]] = None
+    shap_global_importances: Optional[List[Dict[str, Any]]] = None
     status_note: str

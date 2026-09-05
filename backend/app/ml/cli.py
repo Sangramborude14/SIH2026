@@ -17,6 +17,8 @@ import yaml
 
 from backend.app.core.logging import logger
 from backend.app.ml.features.pipeline import LandslideFeaturePipeline
+from backend.app.ml.features.pipeline_v2 import ResearchFeaturePipelineV2
+from backend.app.ml.evaluation.sensitivity import sensitivity_analyzer
 from backend.app.ml.prediction.trainer import trainer
 from backend.app.ml.registry.model_registry import model_registry
 from backend.app.ml.synthetic.generator import SyntheticLandslideDatasetGenerator
@@ -232,8 +234,17 @@ def train_model_from_df(
 
     logger.info(f"Split: Train={len(train_df)}, Val={len(val_df)}, Test={len(test_df)}")
 
-    # 2. Feature Pipeline
-    pipeline = LandslideFeaturePipeline()
+    # 2. Feature Pipeline Selection (v1 vs v2)
+    is_v2 = ("current_rainfall_p99_ratio" in df.columns) or ("forecast_precipitation_24h" in df.columns)
+    if is_v2:
+        pipeline = ResearchFeaturePipelineV2()
+        schema_ver_str = "2.0.0-research"
+        model_ver_str = "v2.1.0-research"
+    else:
+        pipeline = LandslideFeaturePipeline()
+        schema_ver_str = "1.0.0"
+        model_ver_str = "v2.0.0"
+
     for col in pipeline.FEATURE_NAMES:
         if col not in train_df.columns:
             spec = next((f for f in pipeline.FEATURE_SCHEMA if f["name"] == col), None)
@@ -250,7 +261,7 @@ def train_model_from_df(
     X_val = pipeline.transform(val_df)
     X_test = pipeline.transform(test_df)
 
-    # 3. Model Training & Comparison
+    # 3. Model Training & Comparison across 5 candidates
     training_res = trainer.train_full_pipeline(
         X_train=X_train,
         y_train=y_train,
@@ -262,13 +273,20 @@ def train_model_from_df(
         calibrate=True,
     )
 
-
     selected_spec = training_res["selected_spec"]
     test_eval = training_res["test_evaluation"]
     final_model = training_res["model"]
     feature_importances = training_res["feature_importances"]
+    shap_importances = training_res.get("shap_global_importances", [])
 
-    # 4. Serialize Model Artifact Bundle
+    # 4. Physical Sensitivity & Sanity Checks
+    sanity_res = sensitivity_analyzer.run_comprehensive_sanity_checks(final_model, pipeline)
+    logger.info(
+        f"Physical sanity check status: {'PASSED' if sanity_res['overall_sanity_passed'] else 'FLAGGED'} "
+        f"({sanity_res['tests_run']} checks run)"
+    )
+
+    # 5. Serialize Model Artifact Bundle
     model_path = output_dir / "model.joblib"
     joblib.dump(final_model, model_path)
 
@@ -282,13 +300,11 @@ def train_model_from_df(
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(test_eval, f, indent=2)
 
-    version_str = "2.0.0"
     metadata = {
         "model_id": f"tabular-{selected_spec['tier'].lower()}-ner",
         "model_name": selected_spec["name"],
         "model_tier": selected_spec["tier"],
-        "model_version": version_str,
-
+        "model_version": model_ver_str,
         "forecast_horizon": f"{horizon_hours}H",
         "forecast_horizon_hours": horizon_hours,
         "training_source": training_source,
@@ -307,17 +323,20 @@ def train_model_from_df(
         "test_brier_score": test_eval["brier_score"],
         "decision_threshold": 0.50,
         "random_seed": random_seed,
-        "feature_schema_version": "2.0.0",
+        "feature_schema_version": schema_ver_str,
         "feature_names": pipeline.FEATURE_NAMES,
         "feature_importances": feature_importances,
+        "shap_global_importances": shap_importances,
         "candidate_comparison": training_res["candidate_comparison"],
+        "sanity_checks": sanity_res,
+        "monotonic_assumptions": training_res.get("monotonic_assumptions", {}),
     }
 
     meta_path = output_dir / "metadata.json"
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
-    # 5. Copy to active model path for immediate production inference
+    # 6. Copy to active model path for immediate production inference
     active_dir = get_active_model_dir()
     active_dir.mkdir(parents=True, exist_ok=True)
     for fname in ["model.joblib", "pipeline.joblib", "feature_schema.json", "metrics.json", "metadata.json"]:
@@ -399,29 +418,33 @@ def cmd_demo_train(args):
     if synth_file.exists():
         try:
             df = pd.read_parquet(synth_file)
-            manifest = {"positive_count": int(df["landslide_within_24h"].sum())}
-            print(f"Step 1/4: Using existing synthetic dataset at {synth_file.name} ({len(df)} rows)...")
         except Exception:
             df = None
     if df is None and synth_csv.exists():
         try:
             df = pd.read_csv(synth_csv)
-            manifest = {"positive_count": int(df["landslide_within_24h"].sum())}
-            print(f"Step 1/4: Using existing synthetic dataset at {synth_csv.name} ({len(df)} rows)...")
         except Exception:
             df = None
 
-    if df is None:
-        print("Step 1/4: Generating 15,000 multi-signal synthetic scenario samples...")
+    # If existing demo dataset is missing research v2 columns, regenerate
+    need_regenerate = False
+    if df is not None:
+        if "current_rainfall_p99_ratio" not in df.columns or "forecast_precipitation_24h" not in df.columns:
+            need_regenerate = True
+            print("Step 1/4: Existing demo dataset is on legacy schema v1. Regenerating with Research Schema v2...")
+        else:
+            print(f"Step 1/4: Using existing research-v2 synthetic dataset at {synth_file.name} ({len(df)} rows)...")
+
+    if df is None or need_regenerate:
+        print("Step 1/4: Generating 15,000 multi-signal synthetic scenario samples (Research Schema v2)...")
         gen = SyntheticLandslideDatasetGenerator(random_seed=42)
         df, manifest = gen.generate_dataset(num_samples=15000, output_path=synth_file)
         print(f" Generated: {len(df)} samples across 18 scenarios ({manifest['positive_count']} positives).")
 
     print("\nStep 2/4: Splitting data (Group-safe scenario holdout)...")
-    out_dir = get_artifact_dir() / "landslide_24h" / "v2.0.0-demo"
+    out_dir = get_artifact_dir() / "landslide_24h" / "v2.1.0-research"
 
-
-    print("Step 3/4: Training baseline models (Logistic Regression, Random Forest, HistGradientBoosting)...")
+    print("Step 3/4: Benchmarking 5 candidate models (Logistic Regression, Random Forest, HistGB, Standard XGBoost, Research-Constrained XGBoost)...")
     metadata = train_model_from_df(
         df=df,
         output_dir=out_dir,
@@ -431,8 +454,9 @@ def cmd_demo_train(args):
     )
 
     print("\nStep 4/4: Authentic held-out evaluation & artifact serialization...")
-    print("------------------------------------------------------------------")
-    print(f" Selected Model: {metadata['model_name']}")
+    print("-------------------------------------------------------------------------------------------")
+    print(f" Selected Model: {metadata['model_name']} ({metadata['model_tier']})")
+    print(f" Feature Schema: {metadata['feature_schema_version']} ({len(metadata['feature_names'])} features)")
     print(f" Training Source: {metadata['training_source']} ({metadata['validation_level']})")
     print(f" Test ROC-AUC:   {metadata['test_roc_auc']:.4f}")
     print(f" Test PR-AUC:    {metadata['test_pr_auc']:.4f}")
@@ -440,11 +464,30 @@ def cmd_demo_train(args):
     print(f" Test Precision: {metadata['test_precision']:.4f}")
     print(f" Test Recall:    {metadata['test_recall']:.4f}")
     print(f" Test Brier:     {metadata['test_brier_score']:.4f}")
-    print(f" Artifacts:      {out_dir}")
-    print(f" Production Dir: {get_active_model_dir()}")
-    print("------------------------------------------------------------------")
-    print("MODEL READY FOR PRODUCTION INFERENCE. Zero startup training required.")
-    print("==================================================================")
+    print("-------------------------------------------------------------------------------------------")
+
+    print("\nCandidate Model Comparison (Held-Out Validation Fold):")
+    print(f"{'Model Name':<42} | {'PR-AUC':<8} | {'ROC-AUC':<8} | {'F1-Score':<8} | {'Brier':<8}")
+    print("-" * 82)
+    for c in metadata.get("candidate_comparison", []):
+        print(f"{c['name']:<42} | {c['pr_auc']:<8.4f} | {c['roc_auc']:<8.4f} | {c['f1_score']:<8.4f} | {c['brier_score']:<8.4f}")
+
+    sanity = metadata.get("sanity_checks", {})
+    if sanity:
+        print("\nPhysical Sensitivity & Geotechnical Sanity Checks:")
+        for check_name, check_info in sanity.get("checks", {}).items():
+            status_str = "[PASS]" if check_info.get("passed") else "[WARN]"
+            print(f"  {status_str} {check_name}: {check_info.get('description')}")
+
+    shap_list = metadata.get("shap_global_importances", [])
+    if shap_list:
+        print("\nTop Global TreeSHAP Feature Attributions:")
+        for item in shap_list[:5]:
+            print(f"  * {item['feature']}: importance={item['importance_score']:.4f} ({item['method']})")
+
+    print("-------------------------------------------------------------------------------------------")
+    print("RESEARCH MODEL READY FOR PRODUCTION INFERENCE. Zero startup training required.")
+    print("===========================================================================================")
 
 
 # -------------------------------------------------------------
@@ -565,6 +608,38 @@ def cmd_status(args):
     print("==================================================================")
 
 
+def cmd_test_sensitivity(args):
+    """Evaluates physical invariants and monotonicity constraints on active model."""
+    from backend.app.ml.evaluation.sensitivity import LandslideSensitivityAnalyzer
+    model_registry.reload_artifacts()
+    if not model_registry.is_trained_model_active():
+        print("Error: Active model is NOT_TRAINED. Please run 'demo-train' or 'train' first.")
+        sys.exit(1)
+    predictor = model_registry.get_active_predictor()
+
+    print("\n==================================================================")
+    print("   SIH26001 Physical Monotonicity & Geotechnical Sensitivity")
+    print("==================================================================")
+    analyzer = LandslideSensitivityAnalyzer(
+        feature_names=predictor.feature_names,
+        schema_version=predictor.schema_version
+    )
+    report = analyzer.run_all_checks(predictor)
+
+    for name, check in report.get("checks", {}).items():
+        tag = "[PASS]" if check.get("passed") else "[FAIL]"
+        print(f"{tag} {name:<35}: {check.get('description')}")
+        if not check.get("passed"):
+            print(f"       Violations: {check.get('violations')}")
+
+    print("------------------------------------------------------------------")
+    overall = "PASSED ALL PHYSICAL CHECKS" if report.get("all_passed") else "FAILED ONE OR MORE CHECKS"
+    print(f"Overall Result: {overall}")
+    print("==================================================================\n")
+    if not report.get("all_passed"):
+        sys.exit(1)
+
+
 # -------------------------------------------------------------
 # CLI ENTRYPOINT
 # -------------------------------------------------------------
@@ -580,6 +655,9 @@ def main():
 
     # demo-train
     subparsers.add_parser("demo-train", help="One-command end-to-end synthetic demo training")
+
+    # test-sensitivity
+    subparsers.add_parser("test-sensitivity", help="Run physical monotonicity and geotechnical sensitivity checks on active model")
 
     # status
     subparsers.add_parser("status", help="Print model provenance and registry status")
@@ -631,6 +709,8 @@ def main():
         cmd_bootstrap(args)
     elif args.command == "demo-train":
         cmd_demo_train(args)
+    elif args.command == "test-sensitivity":
+        cmd_test_sensitivity(args)
     elif args.command == "status":
         cmd_status(args)
     elif args.command == "synthetic" and getattr(args, "subcommand", None) == "generate":

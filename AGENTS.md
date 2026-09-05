@@ -110,6 +110,12 @@ python -m backend.app.ml.cli bootstrap
 # One-command end-to-end synthetic demo training
 python -m backend.app.ml.cli demo-train
 
+# Run physical monotonicity and geotechnical sensitivity checks
+python -m backend.app.ml.cli test-sensitivity
+
+# Inspect model status and held-out metrics
+python -m backend.app.ml.cli status
+
 # Generate synthetic dataset
 python -m backend.app.ml.cli synthetic generate --samples 50000 --seed 42
 

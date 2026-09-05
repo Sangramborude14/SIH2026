@@ -1,8 +1,12 @@
 from datetime import datetime, timezone
 from typing import List, Dict, Any
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from backend.app.providers.health import provider_health_registry
 from backend.app.core.config import settings
+from backend.app.api.deps import get_db, require_role
+from backend.app.models.user import User
+from backend.app.services.data_retention_service import data_retention_service
 
 router = APIRouter()
 
@@ -22,7 +26,7 @@ async def get_data_sources_health() -> Dict[str, Any]:
         "providers": providers,
         "caching": {
             "status": "OPERATIONAL",
-            "type": "IN_MEMORY_TTL",
+            "type": "REDIS_OR_IN_MEMORY_TTL",
             "ttl_seconds": settings.WEATHER_CACHE_TTL_SECONDS
         },
         "freshness_policy": {
@@ -49,9 +53,12 @@ async def get_ingestion_health() -> Dict[str, Any]:
 
 
 @router.post("/ingestion/trigger")
-async def trigger_manual_live_ingestion():
+async def trigger_manual_live_ingestion(
+    current_user: User = Depends(require_role(["EXPERT", "ADMIN"]))
+):
     """
     Manually triggers an on-demand live environmental ingestion cycle across all NER stations.
+    Restricted to EXPERT or ADMIN roles.
     """
     from backend.app.core.database import AsyncSessionLocal
     from backend.app.services.live_ingestion import LiveWeatherIngestionService
@@ -62,6 +69,29 @@ async def trigger_manual_live_ingestion():
 
     return {
         "message": "Manual live ingestion cycle completed successfully",
+        "triggered_by": current_user.email,
         "result": result
     }
 
+
+@router.post("/maintenance/retention")
+async def trigger_retention_policy_cleanup(
+    current_user: User = Depends(require_role(["ADMIN"])),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Executes automated database retention pruning:
+    - Prunes revoked/expired refresh tokens > 7 days
+    - Prunes stale AI audit logs > 90 days
+    - Prunes old dispatch notification logs > 180 days
+    - Prunes old alert acknowledgments > 90 days
+    Historical environmental observations are strictly preserved for ML retraining.
+    Restricted to ADMIN role.
+    """
+    result = await data_retention_service.execute_retention_policy(db)
+    return {
+        "status": "success",
+        "message": "Data retention policy executed successfully.",
+        "executed_by": current_user.email,
+        "details": result,
+    }

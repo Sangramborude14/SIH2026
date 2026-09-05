@@ -14,6 +14,7 @@ from backend.app.providers.weather.open_meteo import open_meteo_provider
 from backend.app.providers.health import provider_health_registry
 from backend.app.repositories.weather_repository import weather_repository
 from backend.app.services.location_service import LocationService
+from backend.app.core.cache import invalidate_station_weather
 
 
 class LiveWeatherIngestionTracker:
@@ -145,6 +146,7 @@ class LiveWeatherIngestionService:
                 counts = await weather_repository.upsert_batch(session, observational_records)
                 total_inserted += counts["inserted"]
                 total_updated += counts["updated"]
+                await invalidate_station_weather(loc.id)
 
                 # Persist forecast snapshots
                 if forecast_snapshots:

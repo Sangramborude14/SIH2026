@@ -2,7 +2,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.app.api.deps import get_db
+from backend.app.api.deps import get_db, require_role, check_rate_limit
+from backend.app.models.user import User
 from backend.app.services.cap_service import cap_service
 from backend.app.services.sitrep_service import sitrep_service
 from backend.app.services.multichannel_service import multichannel_service
@@ -82,15 +83,20 @@ from backend.app.schemas.alerting import (
 )
 
 
-@router.post("/broadcast", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/broadcast",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(check_rate_limit("alerts:broadcast", max_requests=5, window_seconds=60))]
+)
 async def create_and_dispatch_broadcast(
     req: BroadcastCreate,
     background_tasks: BackgroundTasks,
+    current_user: User = Depends(require_role(["ADMIN"])),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Creates an authorized emergency broadcast and schedules asynchronous dispatch
-    across In-App notifications and SMS provider abstraction.
+    Creates an authorized emergency broadcast and schedules asynchronous dispatch.
+    Strictly restricted to users with ADMIN role.
     """
     broadcast = await BroadcastService.create_broadcast(db, req)
     await db.commit()
